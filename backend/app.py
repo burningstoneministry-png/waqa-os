@@ -535,9 +535,9 @@ def finance_summary():
 def finance_transactions():
     return jsonify({
         "transactions": [
-            {"id": "1", "date": today_str(), "source": "mpaisa", "type": "expense", "amount": 25.00, "description": "BSP transfer", "merchant": "BSP", "category": "Transfer", "currency": "FJD"},
-            {"id": "2", "date": today_str(), "source": "cash", "type": "expense", "amount": 12.50, "description": "Betelnut & snacks", "merchant": "Market", "category": "Food", "currency": "FJD"},
-            {"id": "3", "date": today_str(), "source": "westpac", "type": "expense", "amount": 5.00, "description": "Coffee", "merchant": "CP Coffee", "category": "Food", "currency": "FJD"},
+            {"id": "1", "date": today_str(), "source": "mpaisa", "type": "expense", "amount": 25.00, "description": "BSP transfer", "merchant": "BSP Fiji", "category": "Transfer", "currency": "FJD"},
+            {"id": "2", "date": today_str(), "source": "cash", "type": "expense", "amount": 12.50, "description": "Suva Market", "merchant": "Municipal Market", "category": "Food", "currency": "FJD"},
+            {"id": "3", "date": today_str(), "source": "westpac", "type": "expense", "amount": 5.00, "description": "Coffee", "merchant": "Café Suva", "category": "Food", "currency": "FJD"},
             {"id": "4", "date": (date.today() - timedelta(days=1)).isoformat(), "source": "westpac", "type": "income", "amount": 1200.00, "description": "Freelance payment", "merchant": "Client", "category": "Income", "currency": "FJD"},
         ]
     })
@@ -598,7 +598,7 @@ def mission_stats():
             "discipleship_sessions": 5,
             "milestones": [
                 {"date": "2026-03-20", "milestone": "Led youth service, 8 committed"},
-                {"date": "2026-03-08", "milestone": "Community outreach in Boroko"},
+                {"date": "2026-03-08", "milestone": "Community outreach in Suva"},
             ]
         }
     })

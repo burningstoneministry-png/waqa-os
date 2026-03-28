@@ -9,7 +9,7 @@ interface Props {
   savingsRate: number;
 }
 
-function formatKina(amount: number) {
+function formatFJD(amount: number) {
   return `FJ$${amount.toLocaleString("en-FJ", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -48,7 +48,7 @@ export default function FinancePanel({
             <CreditCard size={11} className="text-[#4f8ef7]" />
             <p className="text-[10px] text-slate-500 uppercase tracking-wider">Westpac</p>
           </div>
-          <p className="text-base font-bold text-white">{formatKina(westpacBalance)}</p>
+          <p className="text-base font-bold text-white">{formatFJD(westpacBalance)}</p>
           <p className="text-[10px] text-slate-600 mt-0.5">Main account</p>
         </div>
 
@@ -58,7 +58,7 @@ export default function FinancePanel({
             <Wallet size={11} className="text-[#fbbf24]" />
             <p className="text-[10px] text-slate-500 uppercase tracking-wider">M-Paisa</p>
           </div>
-          <p className="text-base font-bold text-white">{formatKina(mpaisaBalance)}</p>
+          <p className="text-base font-bold text-white">{formatFJD(mpaisaBalance)}</p>
           <p className="text-[10px] text-slate-600 mt-0.5">Mobile wallet</p>
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function FinancePanel({
       <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3 flex items-center justify-between">
         <div>
           <p className="text-[10px] text-slate-500 uppercase tracking-wider">Total Balance</p>
-          <p className="text-xl font-bold text-white mt-0.5">{formatKina(totalBalance)}</p>
+          <p className="text-xl font-bold text-white mt-0.5">{formatFJD(totalBalance)}</p>
         </div>
         <div className="text-right">
           <span className="badge badge-green">FJD</span>
@@ -81,7 +81,7 @@ export default function FinancePanel({
             <TrendingDown size={12} className="text-[#f87171]" />
             <p className="text-[10px] text-slate-500 uppercase tracking-wider">Spent Today</p>
           </div>
-          <p className="text-sm font-bold text-[#f87171]">{formatKina(todaySpending)}</p>
+          <p className="text-sm font-bold text-[#f87171]">{formatFJD(todaySpending)}</p>
         </div>
         <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
           <div className="flex items-center gap-1.5 mb-1">

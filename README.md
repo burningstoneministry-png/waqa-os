@@ -23,7 +23,7 @@ A comprehensive personal discipline and life-tracking application built to help 
 | **Diary / OCR** | Handwritten diary → OCR → AI summary → Tasks → Google Calendar |
 | **Tasks** | Planned vs actual execution, delay tracking, score |
 | **Health** | Sleep, water (2.5L goal), meals, steps, weight |
-| **Finance** | Westpac + M-Paisa balances, spending in PGK |
+| **Finance** | Westpac + M-Paisa balances, spending in FJD |
 | **Coding** | WakaTime integration, project/language breakdown |
 | **Evening Review** | 9:30 PM daily reflection with AI insights |
 | **Analytics** | Weekly/monthly charts (Recharts) |

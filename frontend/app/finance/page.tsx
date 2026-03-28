@@ -5,7 +5,7 @@ import { DollarSign, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } fr
 import { getFinanceSummary, getFinanceTransactions } from "@/lib/api";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
-function formatKina(amount: number) {
+function formatFJD(amount: number) {
   return `FJ$${amount.toLocaleString("en-FJ", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
@@ -24,9 +24,9 @@ export default function FinancePage() {
   });
 
   const [transactions, setTransactions] = useState([
-    { id: "1", date: new Date().toISOString().split("T")[0], source: "mpaisa", type: "expense", amount: 25.00, description: "BSP transfer", merchant: "BSP", category: "Transfer", currency: "FJD" },
-    { id: "2", date: new Date().toISOString().split("T")[0], source: "cash", type: "expense", amount: 12.50, description: "Market", merchant: "Market", category: "Food", currency: "FJD" },
-    { id: "3", date: new Date().toISOString().split("T")[0], source: "westpac", type: "expense", amount: 5.00, description: "Coffee", merchant: "CP Coffee", category: "Food", currency: "FJD" },
+    { id: "1", date: new Date().toISOString().split("T")[0], source: "mpaisa", type: "expense", amount: 25.00, description: "BSP transfer", merchant: "BSP Fiji", category: "Transfer", currency: "FJD" },
+    { id: "2", date: new Date().toISOString().split("T")[0], source: "cash", type: "expense", amount: 12.50, description: "Suva Market", merchant: "Municipal Market", category: "Food", currency: "FJD" },
+    { id: "3", date: new Date().toISOString().split("T")[0], source: "westpac", type: "expense", amount: 5.00, description: "Coffee", merchant: "Café Suva", category: "Food", currency: "FJD" },
     { id: "4", date: new Date(Date.now() - 86400000).toISOString().split("T")[0], source: "westpac", type: "income", amount: 1200.00, description: "Freelance payment", merchant: "Client", category: "Income", currency: "FJD" },
   ] as { id: string; date: string; source: string; type: string; amount: number; description: string; merchant: string; category: string; currency: string }[]);
 
@@ -47,15 +47,15 @@ export default function FinancePage() {
         <DollarSign size={20} className="text-green-400" />
         <div>
           <h1 className="text-xl font-bold text-white">Finance</h1>
-          <p className="text-slate-400 text-sm">Fiji Kina (FJD) · FJ$ symbol</p>
+          <p className="text-slate-400 text-sm">Fiji Dollar (FJD) · FJ$ symbol</p>
         </div>
       </div>
 
       {/* Total balance */}
       <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-2xl p-6 text-center">
         <p className="text-sm text-slate-400 mb-2">Total Balance</p>
-        <p className="text-5xl font-bold text-white">{formatKina(summary.total_balance)}</p>
-        <p className="text-sm text-slate-400 mt-2">Fiji Kina</p>
+        <p className="text-5xl font-bold text-white">{formatFJD(summary.total_balance)}</p>
+        <p className="text-sm text-slate-400 mt-2">Fiji Dollar</p>
       </div>
 
       {/* Account breakdown */}
@@ -65,14 +65,14 @@ export default function FinancePage() {
             <div className="w-3 h-3 rounded-full bg-blue-400" />
             <span className="text-xs text-slate-400">Westpac</span>
           </div>
-          <p className="text-2xl font-bold text-white">{formatKina(summary.westpac_balance)}</p>
+          <p className="text-2xl font-bold text-white">{formatFJD(summary.westpac_balance)}</p>
         </div>
         <div className="bg-[#1e293b] rounded-2xl p-4 border border-orange-500/20">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-3 h-3 rounded-full bg-orange-400" />
             <span className="text-xs text-slate-400">M-Paisa</span>
           </div>
-          <p className="text-2xl font-bold text-white">{formatKina(summary.mpaisa_balance)}</p>
+          <p className="text-2xl font-bold text-white">{formatFJD(summary.mpaisa_balance)}</p>
         </div>
       </div>
 
@@ -82,12 +82,12 @@ export default function FinancePage() {
         <div className="grid grid-cols-3 gap-3 text-center">
           <div className="bg-green-500/10 rounded-xl p-3">
             <ArrowUpRight size={16} className="text-green-400 mx-auto mb-1" />
-            <p className="text-lg font-bold text-green-400">{formatKina(summary.this_month.income)}</p>
+            <p className="text-lg font-bold text-green-400">{formatFJD(summary.this_month.income)}</p>
             <p className="text-xs text-slate-400">Income</p>
           </div>
           <div className="bg-red-500/10 rounded-xl p-3">
             <ArrowDownRight size={16} className="text-red-400 mx-auto mb-1" />
-            <p className="text-lg font-bold text-red-400">{formatKina(summary.this_month.expenses)}</p>
+            <p className="text-lg font-bold text-red-400">{formatFJD(summary.this_month.expenses)}</p>
             <p className="text-xs text-slate-400">Expenses</p>
           </div>
           <div className="bg-amber-500/10 rounded-xl p-3">
@@ -108,7 +108,7 @@ export default function FinancePage() {
                 <Pie data={summary.top_categories} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={70} innerRadius={30}>
                   {summary.top_categories.map((cat, i) => <Cell key={i} fill={cat.color} stroke="#1e293b" strokeWidth={2} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => [formatKina(v), ""]} contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569", borderRadius: "8px" }} />
+                <Tooltip formatter={(v: number) => [formatFJD(v), ""]} contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569", borderRadius: "8px" }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -117,7 +117,7 @@ export default function FinancePage() {
               <div key={cat.category} className="flex items-center gap-2 text-sm">
                 <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: cat.color }} />
                 <span className="text-slate-300 flex-1 text-xs">{cat.category}</span>
-                <span className="text-slate-300 font-medium text-xs">{formatKina(cat.amount)}</span>
+                <span className="text-slate-300 font-medium text-xs">{formatFJD(cat.amount)}</span>
               </div>
             ))}
           </div>
@@ -132,8 +132,8 @@ export default function FinancePage() {
             <BarChart data={monthlyData} margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} />
-              <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={v => `K${(v/1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => [formatKina(v), ""]} contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569", borderRadius: "8px" }} />
+              <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={v => `FJ$${(v/1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v: number) => [formatFJD(v), ""]} contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569", borderRadius: "8px" }} />
               <Bar dataKey="income" fill="#22c55e" radius={[4, 4, 0, 0]} name="Income" />
               <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name="Expenses" />
             </BarChart>
@@ -156,7 +156,7 @@ export default function FinancePage() {
               </div>
               <div className="text-right">
                 <p className={`text-sm font-bold ${tx.type === "income" ? "text-green-400" : "text-red-400"}`}>
-                  {tx.type === "income" ? "+" : "-"}{formatKina(tx.amount)}
+                  {tx.type === "income" ? "+" : "-"}{formatFJD(tx.amount)}
                 </p>
                 <p className="text-xs text-slate-500">{new Date(tx.date).toLocaleDateString("en-FJ", { day: "numeric", month: "short" })}</p>
               </div>

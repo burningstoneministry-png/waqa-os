@@ -118,7 +118,7 @@ def _extract_tags(text: str) -> list:
         "coding": ["code", "coding", "programming", "project", "build", "develop"],
         "health": ["sleep", "exercise", "water", "eat", "food", "run", "walk"],
         "family": ["family", "kids", "children", "wife", "devotion"],
-        "finance": ["money", "kina", "pgk", "budget", "spend", "save"],
+        "finance": ["money", "dollar", "fjd", "fj$", "budget", "spend", "save"],
         "music": ["music", "bass", "guitar", "practice", "song"],
         "research": ["research", "study", "paper", "experiment", "antigravity"],
     }

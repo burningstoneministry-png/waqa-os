@@ -24,7 +24,7 @@ export default function MissionPage() {
       discipleship_sessions: 5,
       milestones: [
         { date: "2026-03-20", milestone: "Led youth service, 8 committed" },
-        { date: "2026-03-08", milestone: "Community outreach in Boroko" },
+        { date: "2026-03-08", milestone: "Community outreach in Suva" },
       ],
     },
   });

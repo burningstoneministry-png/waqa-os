@@ -73,8 +73,8 @@ def sync_tasks_to_calendar(task_ids: list) -> dict:
             event = {
                 "summary": f"Task {task_id}",
                 "description": "Synced from Claude-Fire dashboard",
-                "start": {"dateTime": f"{today}T09:00:00+10:00", "timeZone": "Pacific/Port_Moresby"},
-                "end": {"dateTime": f"{today}T10:00:00+10:00", "timeZone": "Pacific/Port_Moresby"},
+                "start": {"dateTime": f"{today}T09:00:00+12:00", "timeZone": "Pacific/Fiji"},
+                "end": {"dateTime": f"{today}T10:00:00+12:00", "timeZone": "Pacific/Fiji"},
                 "reminders": {
                     "useDefault": False,
                     "overrides": [
@@ -97,7 +97,7 @@ def sync_tasks_to_calendar(task_ids: list) -> dict:
 
 
 def create_event(title: str, date_str: str, start_time: str, end_time: str,
-                 description: str = "", timezone: str = "Pacific/Port_Moresby") -> dict:
+                 description: str = "", timezone: str = "Pacific/Fiji") -> dict:
     """Create a single calendar event."""
     if not os.getenv("GOOGLE_CLIENT_ID") or os.getenv("GOOGLE_CLIENT_ID") == "your_google_client_id_here":
         return {"event_id": "mock-event-id", "message": "Mock event created (Google Calendar not configured)"}
