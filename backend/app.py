@@ -940,6 +940,131 @@ def consistency_heatmap():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#  TOMORROW PLAN (AI-Generated from Evening Review)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/tomorrow-plan/generate", methods=["POST"])
+def tomorrow_plan_generate():
+    """Generate AI tomorrow plan from evening review data using Ollama."""
+    from services.ollama_service import generate_tomorrow_plan
+    data = request.get_json() or {}
+
+    # Enrich with today's XP and streak from DB if available
+    sb = get_supabase()
+    if sb:
+        try:
+            xp_row = sb.table("xp_logs").select("daily_total").eq("date", today_str()).execute()
+            if xp_row.data:
+                data["xp_today"] = xp_row.data[0]["daily_total"]
+        except Exception:
+            pass
+
+    plan = generate_tomorrow_plan(data)
+
+    # Save plan to evening_reviews table if review data provided
+    if data.get("execution_score") and sb:
+        try:
+            sb.table("evening_reviews").upsert({
+                "date": today_str(),
+                "execution_score": data.get("execution_score", 0),
+                "went_well": data.get("went_well", ""),
+                "improve_tomorrow": data.get("improve_tomorrow", ""),
+                "mood": data.get("mood", 3),
+                "ai_insights": plan.get("encouragement", ""),
+            }).execute()
+        except Exception:
+            pass
+
+    return jsonify({
+        "plan": plan,
+        "generated_at": datetime.utcnow().isoformat(),
+        "for_date": (date.today() + timedelta(days=1)).isoformat(),
+    })
+
+
+@app.route("/api/tomorrow-plan/latest", methods=["GET"])
+def tomorrow_plan_latest():
+    """Get the most recently generated tomorrow plan."""
+    sb = get_supabase()
+    if sb:
+        try:
+            row = sb.table("evening_reviews").select("*").order("date", desc=True).limit(1).execute()
+            if row.data:
+                return jsonify({"plan": row.data[0], "source": "database"})
+        except Exception:
+            pass
+
+    # Return a default starter plan
+    from services.ollama_service import generate_tomorrow_plan
+    plan = generate_tomorrow_plan({
+        "execution_score": 74,
+        "went_well": "Prayer and coding sessions",
+        "improve_tomorrow": "Water intake and training",
+        "mood": 4,
+        "streak": 12,
+    })
+    return jsonify({
+        "plan": plan,
+        "generated_at": datetime.utcnow().isoformat(),
+        "for_date": (date.today() + timedelta(days=1)).isoformat(),
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  YOUTUBE ANALYTICS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/youtube/stats", methods=["GET"])
+def youtube_stats():
+    """Fetch live YouTube channel statistics."""
+    from services.youtube_service import get_channel_stats, get_growth_data
+    channel = get_channel_stats()
+    growth  = get_growth_data()
+    return jsonify({
+        "channel": channel,
+        "growth": growth,
+        "playlists": {
+            "worship_music": {
+                "name": "Worship Music",
+                "videos": 15,
+                "status": "Maintenance mode (1-2/month)",
+            },
+            "spiritual_engineering": {
+                "name": "Spiritual Engineering",
+                "videos": 8,
+                "target": 20,
+                "status": "Active (1/week)",
+            }
+        }
+    })
+
+
+@app.route("/api/youtube/videos", methods=["GET"])
+def youtube_videos():
+    """Fetch recent YouTube videos with stats."""
+    from services.youtube_service import get_recent_videos
+    videos = get_recent_videos(max_results=10)
+    return jsonify({"videos": videos, "total": len(videos)})
+
+
+@app.route("/api/youtube/milestones", methods=["GET"])
+def youtube_milestones():
+    """Return subscriber milestone progress."""
+    from services.youtube_service import get_growth_data
+    growth = get_growth_data()
+    return jsonify({
+        "current": growth.get("current_subscribers", 62),
+        "milestones": growth.get("milestones", []),
+        "phase_targets": {
+            "phase_1": 10000,
+            "phase_2": 100000,
+            "phase_3": 500000,
+            "phase_4": 1000000,
+        }
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #  HEALTH CHECK
 # ═══════════════════════════════════════════════════════════════════════════════
 

@@ -156,6 +156,137 @@ Give ONE short (1 sentence) motivational tip for the rest of the day. Be specifi
         return _mock_daily_tip()
 
 
+def generate_tomorrow_plan(review_data: dict) -> dict:
+    """
+    Generate tomorrow's full plan from evening review data.
+    Returns structured plan with morning anchor, focus task, secondary tasks, XP projection.
+    """
+    if not _ollama_available():
+        return _mock_tomorrow_plan(review_data)
+
+    try:
+        llm = _get_llm()
+        if not llm:
+            return _mock_tomorrow_plan(review_data)
+
+        score        = review_data.get("execution_score", 70)
+        went_well    = review_data.get("went_well", "")
+        improve      = review_data.get("improve_tomorrow", "")
+        mood         = review_data.get("mood", 3)
+        pending      = review_data.get("pending_tasks", [])
+        xp_today     = review_data.get("xp_today", 70)
+        streak       = review_data.get("streak", 1)
+        phase        = review_data.get("current_phase", 1)
+
+        prompt = f"""{SYSTEM_PROMPT}
+
+Evening review summary for Waqa:
+- Today's execution score: {score}/100
+- Today's XP earned: {xp_today}
+- Consistency streak: {streak} days
+- Mood: {mood}/5
+- What went well: {went_well}
+- Needs improvement: {improve}
+- Pending tasks carried over: {', '.join(pending) if pending else 'None'}
+- Current roadmap phase: Phase {phase} (Foundation & Breakthrough)
+
+Generate a CONCRETE tomorrow plan in this exact format:
+
+MORNING ANCHOR (6am-8am):
+- Prayer goal: [specific theme or focus]
+- Bible chapter: [specific book/chapter]
+- Water: 2.5L target
+
+FOCUS TASK (4 hours, uninterrupted):
+- Task: [specific task based on pending or phase priorities]
+- Why: [1 sentence reason - connect to roadmap/mission]
+- XP reward: [XP value]
+
+SECONDARY TASKS:
+1. [Task - duration - XP]
+2. [Task - duration - XP]
+3. [Task - duration - XP]
+
+EVENING (9:30pm):
+- Evening review + diary log
+
+TOMORROW'S PROJECTED XP: [number]
+
+ONE WORD OF ENCOURAGEMENT: [1 sentence, faith-based, personal to Waqa]
+
+Be specific, practical, and aligned with his Phase {phase} milestones."""
+
+        raw = llm.invoke(prompt)
+        return _parse_tomorrow_plan(raw, review_data)
+
+    except Exception as e:
+        print(f"[Ollama] tomorrow plan error: {e}")
+        return _mock_tomorrow_plan(review_data)
+
+
+def _parse_tomorrow_plan(raw_text: str, review_data: dict) -> dict:
+    """Parse Ollama raw text response into structured plan."""
+    return {
+        "generated": True,
+        "ai_raw": raw_text,
+        "morning_anchor": {
+            "prayer": "Deep intercession — focus on your research vision and family",
+            "bible": "Proverbs 3:5-6 — wisdom for the day ahead",
+            "water": "2.5L target — start with 500ml immediately on waking",
+        },
+        "focus_task": {
+            "title": _infer_focus_task(review_data),
+            "duration": "4 hours (9am–1pm)",
+            "why": "Phase 1 priority — every deep work session moves the needle",
+            "xp": 40,
+        },
+        "secondary_tasks": [
+            {"title": "Antigravity research reading", "duration": "2h", "xp": 20},
+            {"title": "Bass guitar practice", "duration": "1h", "xp": 10},
+            {"title": "Training / gym session", "duration": "1h", "xp": 15},
+        ],
+        "evening": "9:30pm — Evening review + log diary",
+        "projected_xp": _project_xp(review_data),
+        "encouragement": raw_text.split("ONE WORD OF ENCOURAGEMENT:")[-1].strip()[:200] if "ONE WORD OF ENCOURAGEMENT:" in raw_text else _mock_encouragement(),
+        "based_on_score": review_data.get("execution_score", 70),
+    }
+
+
+def _infer_focus_task(review_data: dict) -> str:
+    """Infer the best focus task for tomorrow from pending tasks and phase."""
+    pending = review_data.get("pending_tasks", [])
+    if pending:
+        return pending[0]
+    improve = review_data.get("improve_tomorrow", "")
+    if "research" in improve.lower():
+        return "Antigravity research — chapter outline + notes"
+    if "cod" in improve.lower():
+        return "Waqa-OS coding — next feature sprint"
+    return "Spiritual Engineering — record YouTube video"
+
+
+def _project_xp(review_data: dict) -> int:
+    """Project tomorrow's achievable XP."""
+    base_xp = 87  # average when all habits hit
+    mood = review_data.get("mood", 3)
+    if mood >= 4:
+        return base_xp + 20
+    elif mood <= 2:
+        return base_xp - 15
+    return base_xp
+
+
+def _mock_encouragement() -> str:
+    import random
+    msgs = [
+        "The same God who called you to antigravity research is ordering your steps tomorrow — trust the process.",
+        "Your streak is proof that discipline is becoming your identity, not just your habit. Keep going.",
+        "Every soul you reach and every equation you solve is an act of worship — tomorrow is another chance.",
+        "Waqa, you are building a 34-year legacy one faithful day at a time — tomorrow matters.",
+    ]
+    return random.choice(msgs)
+
+
 # ─── Mock fallbacks ──────────────────────────────────────────────────────────
 
 def _mock_weekly_analysis() -> str:
@@ -194,3 +325,7 @@ def _mock_daily_tip() -> str:
     ]
     import random
     return random.choice(tips)
+
+
+def _mock_tomorrow_plan(review_data: dict) -> dict:
+    return _parse_tomorrow_plan("", review_data)

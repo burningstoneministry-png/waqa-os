@@ -66,3 +66,29 @@ export const getMissionStats = () => api.get('/api/mission/stats');
 
 // ─── Notifications ───────────────────────────────────────────────────────────
 export const checkNotifications = () => api.get('/api/notifications/check');
+
+// ─── XP Gamification ─────────────────────────────────────────────────────────
+export const getXPToday     = () => api.get('/api/xp/today');
+export const getXPWeekly    = () => api.get('/api/xp/weekly');
+export const getXPMonthly   = () => api.get('/api/xp/monthly');
+
+// ─── Skill Trees ─────────────────────────────────────────────────────────────
+export const getSkillLevels = () => api.get('/api/skills/levels');
+
+// ─── Rewards ─────────────────────────────────────────────────────────────────
+export const getRewardsStatus  = () => api.get('/api/rewards/status');
+export const getRewardsHistory = () => api.get('/api/rewards/history');
+export const claimReward       = (data: object) => api.post('/api/rewards/claim', data);
+
+// ─── Phases & Consistency ────────────────────────────────────────────────────
+export const getCurrentPhase      = () => api.get('/api/phases/current');
+export const getConsistencyHeatmap = () => api.get('/api/consistency/heatmap');
+
+// ─── Tomorrow Plan (AI) ──────────────────────────────────────────────────────
+export const generateTomorrowPlan = (data: object) => api.post('/api/tomorrow-plan/generate', data);
+export const getLatestTomorrowPlan = () => api.get('/api/tomorrow-plan/latest');
+
+// ─── YouTube Analytics ───────────────────────────────────────────────────────
+export const getYouTubeStats      = () => api.get('/api/youtube/stats');
+export const getYouTubeVideos     = () => api.get('/api/youtube/videos');
+export const getYouTubeMilestones = () => api.get('/api/youtube/milestones');

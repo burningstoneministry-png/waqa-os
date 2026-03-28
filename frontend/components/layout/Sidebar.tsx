@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, ListTodo, Flame, Music, BookOpen,
-  Heart, Activity, DollarSign, Target, Star, BarChart2,
+  Activity, DollarSign, Target, Star, BarChart2,
   Zap, Sparkles, Trophy, Gift, MapPin, TrendingUp,
+  Moon, Youtube,
 } from "lucide-react";
 
 const navItems = [
@@ -16,6 +17,8 @@ const navItems = [
   { href: "/roadmap", icon: MapPin, label: "Roadmap" },
   { href: "/consistency", icon: TrendingUp, label: "Consistency" },
   { href: "/rewards", icon: Gift, label: "Rewards" },
+  { href: "/tomorrow-plan", icon: Moon, label: "Tomorrow Plan" },
+  { href: "/youtube", icon: Youtube, label: "YouTube" },
   { href: "/tasks", icon: ListTodo, label: "Tasks" },
   { href: "/prayer", icon: Flame, label: "Prayer" },
   { href: "/diary", icon: BookOpen, label: "Diary / OCR" },
