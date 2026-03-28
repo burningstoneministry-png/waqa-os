@@ -76,7 +76,7 @@ export default function TopBar() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#4f8ef7] to-[#a78bfa] flex items-center justify-center">
               <Zap size={13} className="text-white" strokeWidth={2.5} />
             </div>
-            <span className="font-bold text-white text-sm">Claude-Fire</span>
+            <span className="font-bold text-white text-sm">Waqa-OS</span>
           </div>
           {/* Page title (desktop) */}
           <div className="hidden lg:block">

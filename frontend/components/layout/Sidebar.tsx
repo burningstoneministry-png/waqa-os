@@ -48,7 +48,7 @@ export default function Sidebar() {
           <Zap size={16} className="text-white" strokeWidth={2.5} />
         </div>
         <div>
-          <p className="font-bold text-white text-sm leading-tight tracking-tight">Claude-Fire</p>
+          <p className="font-bold text-white text-sm leading-tight tracking-tight">Waqa-OS</p>
           <p className="text-[10px] text-slate-500 leading-tight mt-0.5">Waqa · Fiji</p>
         </div>
       </div>

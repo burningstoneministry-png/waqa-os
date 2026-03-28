@@ -4,7 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 
 export const metadata: Metadata = {
-  title: "Claude-Fire | Waqa's Discipline Dashboard",
+  title: "Waqa-OS | Personal Discipline Dashboard",
   description: "Personal discipline dashboard for Waqa — Fiji",
 };
 
