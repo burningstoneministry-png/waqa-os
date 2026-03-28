@@ -1,10 +1,12 @@
 """
 YouTube Analytics Service for Waqa-OS
 Fetches live channel stats using YouTube Data API v3
-Channel: "Waqa's Channel" — Worship Music + Spiritual Engineering playlists
+Channel: "Burning Stone Ministry" (@BurningStoneMinistry)
+  - Playlist 1: Worship Music (existing, 62 subs)
+  - Playlist 2: Spiritual Engineering (NEW - teaching content)
 
 SETUP: Set YOUTUBE_API_KEY in Render environment variables
-       Set YOUTUBE_CHANNEL_ID in Render environment variables
+       Set YOUTUBE_CHANNEL_ID = UCzgfn33xOj_Dly244wV1Atg in Render
 """
 
 import os
@@ -199,7 +201,8 @@ def _get_subscriber_milestones(current: int) -> list:
 
 def _mock_channel_stats() -> dict:
     return {
-        "channel_name": "Waqa's Channel",
+        "channel_name": "Burning Stone Ministry",
+        "handle": "@BurningStoneMinistry",
         "subscribers": 62,
         "total_views": 3241,
         "total_videos": 15,

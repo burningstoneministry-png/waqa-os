@@ -59,7 +59,7 @@ export default function YouTubePage() {
         <Youtube size={20} className="text-red-400" />
         <div>
           <h1 className="text-xl font-bold text-white">YouTube Analytics</h1>
-          <p className="text-slate-400 text-sm">Waqa's Channel — Worship + Spiritual Engineering</p>
+          <p className="text-slate-400 text-sm">@BurningStoneMinistry — Worship Music + Spiritual Engineering</p>
         </div>
         {!channel.live && (
           <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded flex items-center gap-1">
