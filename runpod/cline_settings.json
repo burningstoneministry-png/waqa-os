@@ -1,0 +1,33 @@
+// =============================================================================
+// cline_settings.json — Cline extension settings for VS Code
+// Pod ID: hzyc826450y9h7
+// =============================================================================
+//
+// HOW TO USE:
+//   Option A — Project-level (recommended):
+//     1. Open your project folder in VS Code
+//     2. Create a .vscode/ folder in the project root (if it doesn't exist)
+//     3. Create .vscode/settings.json and paste the JSON block below into it
+//
+//   Option B — Global (applies to all projects):
+//     1. Press Ctrl+Shift+P
+//     2. Type "Open User Settings (JSON)" and select it
+//     3. Paste the JSON block below into the existing object
+//
+// IMPORTANT — useCompactPrompt must stay true:
+//   Without this, Cline sends its full system prompt on every request.
+//   For a 32B model this causes context overflow and requests will fail
+//   after a few exchanges in long sessions.
+//
+// =============================================================================
+
+{
+  "cline.apiProvider": "openai-compatible",
+  "cline.openAiBaseUrl": "https://hzyc826450y9h7-11434.proxy.runpod.net/v1",
+  "cline.openAiApiKey": "ollama",
+  "cline.openAiModelId": "qwen2.5-coder:32b",
+  "cline.contextWindow": 32768,
+  "cline.maxTokens": 8192,
+  "cline.requestTimeoutMs": 300000,
+  "cline.useCompactPrompt": true
+}
