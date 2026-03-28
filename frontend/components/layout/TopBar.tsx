@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, RefreshCw, Zap } from "lucide-react";
+import { Bell, Zap, Sun, Moon } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -21,6 +21,21 @@ export default function TopBar() {
   const pathname = usePathname();
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const dark = stored !== "light";
+    setIsDark(dark);
+    document.documentElement.classList.toggle("light", !dark);
+  }, []);
+
+  function toggleTheme() {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("light", !next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  }
 
   useEffect(() => {
     const update = () => {
@@ -89,6 +104,15 @@ export default function TopBar() {
             <span className="text-sm font-bold text-[#4f8ef7]">74</span>
             <span className="text-[10px] text-slate-600">/100</span>
           </div>
+
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            className="w-8 h-8 rounded-lg bg-[#1a1d2e] border border-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:border-white/10 transition-all"
+          >
+            {isDark ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
 
           {/* Notification bell */}
           <button

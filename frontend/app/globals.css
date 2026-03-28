@@ -18,6 +18,49 @@
   --text-muted: #64748b;
 }
 
+/* ─── Light mode overrides ─────────────────────────────────────────── */
+html.light {
+  --bg-body: #f1f5f9;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --border-subtle: rgba(0, 0, 0, 0.07);
+  --border-medium: rgba(0, 0, 0, 0.12);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+}
+
+html.light body {
+  background-color: var(--bg-body);
+  color: var(--text-primary);
+}
+
+/* Remap hardcoded dark Tailwind bg classes in light mode */
+html.light .bg-\[\#020817\],
+html.light .bg-\[\#0d0f1a\],
+html.light .bg-\[\#0f172a\] { background-color: #f1f5f9 !important; }
+
+html.light .bg-\[\#131625\]  { background-color: #ffffff !important; }
+html.light .bg-\[\#1a1d2e\]  { background-color: #f8fafc !important; }
+html.light .bg-\[\#131625\]\/95 { background-color: rgba(255,255,255,0.95) !important; }
+
+/* Text remaps */
+html.light .text-white       { color: #0f172a !important; }
+html.light .text-slate-200   { color: #1e293b !important; }
+html.light .text-slate-400   { color: #64748b !important; }
+html.light .text-slate-500   { color: #64748b !important; }
+html.light .text-slate-600   { color: #94a3b8 !important; }
+
+/* Border remaps */
+html.light .border-white\/5  { border-color: rgba(0,0,0,0.08) !important; }
+html.light .border-white\/10 { border-color: rgba(0,0,0,0.12) !important; }
+
+/* Scrollbar */
+html.light ::-webkit-scrollbar-track { background: #e2e8f0; }
+html.light ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
+html.light ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
 * {
   box-sizing: border-box;
 }
