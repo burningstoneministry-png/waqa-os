@@ -121,7 +121,7 @@ CREATE TABLE finance_transactions (
   source TEXT CHECK (source IN ('mpaisa', 'westpac', 'cash', 'other')),
   type TEXT CHECK (type IN ('income', 'expense', 'transfer')),
   amount DECIMAL NOT NULL,
-  currency TEXT DEFAULT 'PGK',
+  currency TEXT DEFAULT 'FJD',
   description TEXT,
   merchant TEXT,
   category TEXT,
