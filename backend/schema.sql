@@ -206,6 +206,96 @@ CREATE TABLE mission_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- XP GAMIFICATION SYSTEM (NEW)
+-- ============================================================
+
+-- XP LOGS (tracks XP earned daily)
+CREATE TABLE xp_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date DATE NOT NULL,
+  daily_total INTEGER DEFAULT 0,
+  prayer_xp INTEGER DEFAULT 0,
+  bible_study_xp INTEGER DEFAULT 0,
+  water_intake_xp INTEGER DEFAULT 0,
+  training_xp INTEGER DEFAULT 0,
+  research_xp INTEGER DEFAULT 0,
+  coding_xp INTEGER DEFAULT 0,
+  bass_practice_xp INTEGER DEFAULT 0,
+  fasting_xp INTEGER DEFAULT 0,
+  mentoring_xp INTEGER DEFAULT 0,
+  consistency_bonus INTEGER DEFAULT 0, -- 7-day streak bonus
+  all_habits_bonus INTEGER DEFAULT 0,  -- monthly all-habits-hit bonus
+  custom_xp INTEGER DEFAULT 0,         -- manual adjustments
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- SKILL LEVELS (tracks progression in each of 6 skill trees)
+CREATE TABLE skill_levels (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  skill_tree TEXT NOT NULL CHECK (skill_tree IN ('prayer_spirit', 'antigravity', 'kingdom_influence', 'coding_automation', 'health_discipline', 'spiritual_engineering')),
+  current_level INTEGER DEFAULT 1,
+  current_xp INTEGER DEFAULT 0,
+  total_xp_earned INTEGER DEFAULT 0,
+  last_level_up_date DATE,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- REWARD TRACKER (logs when rewards are earned/claimed)
+CREATE TABLE reward_claims (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date DATE NOT NULL,
+  tier INTEGER CHECK (tier BETWEEN 1 AND 4), -- 1=Weekly, 2=Monthly, 3=Phase, 4=Mastery
+  reward_name TEXT,
+  reward_description TEXT,
+  budget_fj_dollars DECIMAL,
+  status TEXT CHECK (status IN ('earned', 'claimed', 'skipped')), -- earned=eligible, claimed=completed, skipped=passed
+  claimed_date DATE,
+  notes TEXT,
+  photo_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- REWARD PHOTOS (family celebration photos)
+CREATE TABLE reward_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reward_claim_id UUID REFERENCES reward_claims(id),
+  date DATE NOT NULL,
+  photo_url TEXT NOT NULL,
+  caption TEXT,
+  family_notes TEXT,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- PHASE MILESTONES (tracks completion of phase-specific goals)
+CREATE TABLE phase_milestones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  phase_number INTEGER CHECK (phase_number BETWEEN 1 AND 7),
+  milestone_name TEXT NOT NULL,
+  category TEXT, -- 'antigravity', 'kingdom', 'coding', 'health', 'spiritual_engineering'
+  completed BOOLEAN DEFAULT FALSE,
+  completion_date DATE,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- CONSISTENCY TRACKER (daily habit tracking for heat map)
+CREATE TABLE consistency_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date DATE NOT NULL,
+  prayer BOOLEAN DEFAULT FALSE,
+  bible_study BOOLEAN DEFAULT FALSE,
+  water_intake BOOLEAN DEFAULT FALSE,
+  training BOOLEAN DEFAULT FALSE,
+  consistency_percentage INTEGER, -- 0-100
+  streak_days INTEGER DEFAULT 0,
+  all_habits_hit BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- DEFAULT CATEGORIES INSERT
 INSERT INTO categories (name, color, icon, goal_minutes_per_day) VALUES
   ('Sleep', '#1e3a5f', '🌙', 420),

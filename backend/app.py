@@ -510,7 +510,7 @@ def finance_summary():
         "westpac_balance": 3240.50,
         "mpaisa_balance": 85.00,
         "total_balance": 3325.50,
-        "currency": "PGK",
+        "currency": "FJD",
         "this_month": {
             "income": 4800.00,
             "expenses": 3920.00,
@@ -535,10 +535,10 @@ def finance_summary():
 def finance_transactions():
     return jsonify({
         "transactions": [
-            {"id": "1", "date": today_str(), "source": "mpaisa", "type": "expense", "amount": 25.00, "description": "BSP transfer", "merchant": "BSP", "category": "Transfer", "currency": "PGK"},
-            {"id": "2", "date": today_str(), "source": "cash", "type": "expense", "amount": 12.50, "description": "Betelnut & snacks", "merchant": "Market", "category": "Food", "currency": "PGK"},
-            {"id": "3", "date": today_str(), "source": "westpac", "type": "expense", "amount": 5.00, "description": "Coffee", "merchant": "CP Coffee", "category": "Food", "currency": "PGK"},
-            {"id": "4", "date": (date.today() - timedelta(days=1)).isoformat(), "source": "westpac", "type": "income", "amount": 1200.00, "description": "Freelance payment", "merchant": "Client", "category": "Income", "currency": "PGK"},
+            {"id": "1", "date": today_str(), "source": "mpaisa", "type": "expense", "amount": 25.00, "description": "BSP transfer", "merchant": "BSP", "category": "Transfer", "currency": "FJD"},
+            {"id": "2", "date": today_str(), "source": "cash", "type": "expense", "amount": 12.50, "description": "Betelnut & snacks", "merchant": "Market", "category": "Food", "currency": "FJD"},
+            {"id": "3", "date": today_str(), "source": "westpac", "type": "expense", "amount": 5.00, "description": "Coffee", "merchant": "CP Coffee", "category": "Food", "currency": "FJD"},
+            {"id": "4", "date": (date.today() - timedelta(days=1)).isoformat(), "source": "westpac", "type": "income", "amount": 1200.00, "description": "Freelance payment", "merchant": "Client", "category": "Income", "currency": "FJD"},
         ]
     })
 
@@ -633,6 +633,309 @@ def pie_chart_today():
         "total_tracked_minutes": total_minutes,
         "total_minutes_in_day": 1440,
         "data": data_with_pct
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  XP GAMIFICATION SYSTEM
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/xp/today", methods=["GET"])
+def xp_today():
+    """Returns today's XP breakdown and total"""
+    from services.xp_service import XPCalculator
+    calc = XPCalculator(get_supabase())
+
+    # Mock data for now (will connect to actual logs)
+    today_activities = {
+        "prayer_minutes": 50,
+        "bible_study_minutes": 35,
+        "water_ml": 1500,
+        "training_minutes": 90,
+        "research_minutes": 120,
+        "coding_minutes": 210,
+        "bass_practice_minutes": 60,
+        "fasting_weekly": False,
+        "mentoring_minutes": 0,
+    }
+
+    total_xp, breakdown = calc.calculate_daily_xp(today_activities)
+
+    return jsonify({
+        "date": today_str(),
+        "daily_xp": total_xp,
+        "breakdown": breakdown,
+        "progress_to_next_level": {
+            "current": 67,
+            "needed": 100,
+            "percentage": 67
+        }
+    })
+
+
+@app.route("/api/xp/weekly", methods=["GET"])
+def xp_weekly():
+    """Returns weekly XP summary"""
+    return jsonify({
+        "week_start": (date.today() - timedelta(days=date.today().weekday())).isoformat(),
+        "week_end": (date.today() + timedelta(days=6 - date.today().weekday())).isoformat(),
+        "total_xp": 487,
+        "daily_breakdown": [
+            {"day": "Monday", "xp": 85},
+            {"day": "Tuesday", "xp": 92},
+            {"day": "Wednesday", "xp": 71},
+            {"day": "Thursday", "xp": 88},
+            {"day": "Friday", "xp": 79},
+            {"day": "Saturday", "xp": 97},
+            {"day": "Sunday", "xp": 75},
+        ],
+        "consistency": 87,
+        "streak": 12
+    })
+
+
+@app.route("/api/xp/monthly", methods=["GET"])
+def xp_monthly():
+    """Returns monthly XP summary"""
+    from datetime import date
+    today = date.today()
+    month_start = date(today.year, today.month, 1)
+    month_end = date(today.year, today.month + 1, 1) - timedelta(days=1) if today.month < 12 else date(today.year + 1, 1, 1) - timedelta(days=1)
+
+    return jsonify({
+        "month": today.strftime("%B %Y"),
+        "total_xp": 1850,
+        "days_active": 25,
+        "avg_daily": 74,
+        "best_day": 120,
+        "worst_day": 35,
+        "bonuses_earned": 150,
+        "trend": "↑ 12% from last month"
+    })
+
+
+# ─── SKILL TREES ─────────────────────────────────────────────────────────────
+
+@app.route("/api/skills/levels", methods=["GET"])
+def skills_levels():
+    """Returns all 6 skill tree current levels and XP"""
+    from services.xp_service import SKILL_TREES
+
+    return jsonify({
+        "skills": [
+            {
+                "id": "prayer_spirit",
+                "name": SKILL_TREES["prayer_spirit"]["name"],
+                "icon": SKILL_TREES["prayer_spirit"]["icon"],
+                "level": 5,
+                "current_xp": 850,
+                "xp_to_next": 150,
+                "total_earned": 2350,
+                "status": "ACTIVE"
+            },
+            {
+                "id": "antigravity",
+                "name": SKILL_TREES["antigravity"]["name"],
+                "icon": SKILL_TREES["antigravity"]["icon"],
+                "level": 4,
+                "current_xp": 650,
+                "xp_to_next": 350,
+                "total_earned": 2150,
+                "status": "ACTIVE"
+            },
+            {
+                "id": "kingdom_influence",
+                "name": SKILL_TREES["kingdom_influence"]["name"],
+                "icon": SKILL_TREES["kingdom_influence"]["icon"],
+                "level": 5,
+                "current_xp": 920,
+                "xp_to_next": 80,
+                "total_earned": 2420,
+                "status": "ACTIVE"
+            },
+            {
+                "id": "coding_automation",
+                "name": SKILL_TREES["coding_automation"]["name"],
+                "icon": SKILL_TREES["coding_automation"]["icon"],
+                "level": 4,
+                "current_xp": 700,
+                "xp_to_next": 300,
+                "total_earned": 2200,
+                "status": "ACTIVE"
+            },
+            {
+                "id": "health_discipline",
+                "name": SKILL_TREES["health_discipline"]["name"],
+                "icon": SKILL_TREES["health_discipline"]["icon"],
+                "level": 5,
+                "current_xp": 880,
+                "xp_to_next": 120,
+                "total_earned": 2380,
+                "status": "ACTIVE"
+            },
+            {
+                "id": "spiritual_engineering",
+                "name": SKILL_TREES["spiritual_engineering"]["name"],
+                "icon": SKILL_TREES["spiritual_engineering"]["icon"],
+                "level": 3,
+                "current_xp": 380,
+                "xp_to_next": 620,
+                "total_earned": 880,
+                "status": "NEW"
+            },
+        ]
+    })
+
+
+# ─── REWARDS ─────────────────────────────────────────────────────────────────
+
+@app.route("/api/rewards/status", methods=["GET"])
+def rewards_status():
+    """Get current reward tier eligibility"""
+    from services.xp_service import RewardTracker
+    tracker = RewardTracker(get_supabase())
+
+    tracker_data = {
+        "weekly_consistency": 71,
+        "monthly_consistency": 74,
+        "skill_levelups_this_month": 1,
+        "phase_milestones_done": 18,
+        "phase_total_milestones": 25,
+        "phase_progress_percent": 72,
+        "highest_skill_level": 5,
+    }
+
+    status = tracker.get_reward_status(tracker_data)
+
+    return jsonify({
+        "current_status": status,
+        "monthly_budget": {
+            "total": 300,
+            "spent": 180,
+            "remaining": 120
+        }
+    })
+
+
+@app.route("/api/rewards/history", methods=["GET"])
+def rewards_history():
+    """Get reward claim history"""
+    sb = get_supabase()
+
+    if sb:
+        try:
+            response = sb.table("reward_claims").select("*").order("date", desc=True).limit(20).execute()
+            return jsonify({"rewards": response.data})
+        except:
+            pass
+
+    # Mock data
+    return jsonify({
+        "rewards": [
+            {
+                "date": "2026-03-22",
+                "tier": 1,
+                "reward_name": "McDonald's with kids",
+                "status": "claimed",
+                "photo_url": "..."
+            },
+            {
+                "date": "2026-03-15",
+                "tier": 1,
+                "reward_name": "Ice cream outing",
+                "status": "claimed",
+                "photo_url": "..."
+            },
+            {
+                "date": "2026-03-08",
+                "tier": 1,
+                "reward_name": "Restaurant night",
+                "status": "claimed",
+                "photo_url": "..."
+            },
+            {
+                "date": "2026-02-28",
+                "tier": 2,
+                "reward_name": "Upscale dinner",
+                "status": "claimed",
+                "photo_url": "..."
+            },
+        ]
+    })
+
+
+@app.route("/api/rewards/claim", methods=["POST"])
+def rewards_claim():
+    """Log a reward claim"""
+    data = request.get_json() or {}
+    sb = get_supabase()
+
+    record = {
+        "date": today_str(),
+        "tier": data.get("tier", 1),
+        "reward_name": data.get("reward_name", ""),
+        "reward_description": data.get("description", ""),
+        "budget_fj_dollars": data.get("budget", 0),
+        "status": "claimed",
+        "claimed_date": today_str(),
+        "notes": data.get("notes", ""),
+        "photo_url": data.get("photo_url"),
+    }
+
+    if sb:
+        try:
+            res = sb.table("reward_claims").insert(record).execute()
+            return jsonify({"id": res.data[0]["id"], "message": "Reward claimed!", "reward": res.data[0]})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+    return jsonify({"id": "mock-reward-1", "message": "Reward claimed (mock)!"})
+
+
+# ─── CONSISTENCY & PHASES ────────────────────────────────────────────────────
+
+@app.route("/api/phases/current", methods=["GET"])
+def current_phase():
+    """Get current phase and unlock requirements"""
+    return jsonify({
+        "current_phase": 1,
+        "phase_name": "FOUNDATION & BREAKTHROUGH",
+        "age_range": "36-40",
+        "progress_percentage": 67,
+        "milestones_completed": 8,
+        "milestones_total": 10,
+        "xp_required": 250000,
+        "xp_earned": 180000,
+        "xp_percentage": 72,
+        "skill_levels_6plus": 3,  # Have 3 skills at level 6+
+        "skill_levels_required": 3,
+        "on_track": True,
+        "estimated_completion": "December 2030"
+    })
+
+
+@app.route("/api/consistency/heatmap", methods=["GET"])
+def consistency_heatmap():
+    """Get 52-week consistency heatmap data"""
+    return jsonify({
+        "week_data": [
+            # Week 1-4 of current month
+            [100, 85, 75, 90, 95, 100, 80],  # Week 1
+            [95, 90, 85, 75, 95, 100, 85],   # Week 2
+            [90, 85, 95, 100, 90, 85, 90],   # Week 3
+            [100, 95, 90, 100, 95, 100, 100], # Week 4
+            # More weeks (mock data)
+            [85, 80, 75, 80, 85, 90, 80],
+            [90, 95, 100, 95, 90, 85, 90],
+        ],
+        "month_averages": {
+            "January": 92,
+            "February": 88,
+            "March": 87
+        },
+        "current_streak": 47,
+        "best_streak": 78,
+        "target_consistency": 90
     })
 
 

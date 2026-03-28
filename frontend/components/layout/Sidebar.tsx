@@ -6,11 +6,16 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard, ListTodo, Flame, Music, BookOpen,
   Heart, Activity, DollarSign, Target, Star, BarChart2,
-  Zap,
+  Zap, Sparkles, Trophy, Gift, MapPin, TrendingUp,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/xp", icon: Sparkles, label: "XP Tracker" },
+  { href: "/skills", icon: Trophy, label: "Skill Trees" },
+  { href: "/roadmap", icon: MapPin, label: "Roadmap" },
+  { href: "/consistency", icon: TrendingUp, label: "Consistency" },
+  { href: "/rewards", icon: Gift, label: "Rewards" },
   { href: "/tasks", icon: ListTodo, label: "Tasks" },
   { href: "/prayer", icon: Flame, label: "Prayer" },
   { href: "/diary", icon: BookOpen, label: "Diary / OCR" },
