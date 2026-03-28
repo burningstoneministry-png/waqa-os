@@ -1,6 +1,6 @@
 """
 Email Service — SendGrid / smtplib fallback
-Claude-Fire | Waqa | Papua New Guinea
+Claude-Fire | Waqa | Fiji
 """
 
 import os
@@ -80,7 +80,7 @@ def send_daily_summary(score: int, highlights: list, tomorrows_tasks: list) -> d
     html = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f172a;color:#e2e8f0;padding:24px;border-radius:12px;">
       <h1 style="color:#f59e0b;margin-bottom:4px;">Claude-Fire Dashboard</h1>
-      <p style="color:#94a3b8;margin-bottom:24px;">{datetime.now().strftime('%A, %d %B %Y')} · Papua New Guinea</p>
+      <p style="color:#94a3b8;margin-bottom:24px;">{datetime.now().strftime('%A, %d %B %Y')} · Fiji</p>
 
       <div style="background:#1e293b;border-radius:8px;padding:20px;margin-bottom:16px;text-align:center;">
         <p style="margin:0;color:#94a3b8;">Today's Execution Score</p>
@@ -99,7 +99,7 @@ def send_daily_summary(score: int, highlights: list, tomorrows_tasks: list) -> d
       </div>
 
       <p style="color:#475569;font-size:12px;margin-top:24px;text-align:center;">
-        Claude-Fire Personal Discipline Dashboard · Waqa · Papua New Guinea
+        Claude-Fire Personal Discipline Dashboard · Waqa · Fiji
       </p>
     </div>
     """
@@ -126,7 +126,7 @@ def send_weekly_report(week_data: dict) -> dict:
       </div>
 
       <p style="color:#475569;font-size:12px;margin-top:24px;text-align:center;">
-        Claude-Fire · Waqa · Papua New Guinea
+        Claude-Fire · Waqa · Fiji
       </p>
     </div>
     """
@@ -158,7 +158,7 @@ def send_water_reminder(current_ml: int, goal_ml: int) -> dict:
       <h1 style="font-size:48px;margin:0;">💧</h1>
       <h2 style="color:#60a5fa;">Drink Water!</h2>
       <p style="color:#94a3b8;">You've had {current_ml}ml of {goal_ml}ml today ({pct}%)</p>
-      <p style="color:#e2e8f0;">Grab a glass of water now. Stay hydrated in the PNG heat!</p>
+      <p style="color:#e2e8f0;">Grab a glass of water now. Stay hydrated in the Fiji heat!</p>
     </div>
     """
     return send_email(to_email, subject, html)

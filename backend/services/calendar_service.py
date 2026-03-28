@@ -1,6 +1,6 @@
 """
 Google Calendar Service
-Claude-Fire | Waqa | Papua New Guinea
+Claude-Fire | Waqa | Fiji
 """
 
 import os

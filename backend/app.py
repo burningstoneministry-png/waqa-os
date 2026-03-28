@@ -1,6 +1,6 @@
 """
 Claude-Fire Personal Discipline Dashboard — Flask Backend
-User: Waqa | Papua New Guinea
+User: Waqa | Fiji
 """
 
 import os
@@ -647,7 +647,7 @@ def health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0",
         "user": "Waqa",
-        "location": "Papua New Guinea"
+        "location": "Fiji"
     })
 
 

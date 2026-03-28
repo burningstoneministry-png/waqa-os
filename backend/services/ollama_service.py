@@ -1,6 +1,6 @@
 """
 Ollama Service — Local AI insights via LangChain
-Claude-Fire | Waqa | Papua New Guinea
+Claude-Fire | Waqa | Fiji
 """
 
 import os
@@ -10,13 +10,13 @@ from datetime import datetime
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
 
-SYSTEM_PROMPT = """You are a personal discipline coach AI assistant for Waqa, a Christian man from Papua New Guinea.
+SYSTEM_PROMPT = """You are a personal discipline coach AI assistant for Waqa, a Christian man from Fiji.
 He is working on:
 1. ANTIGRAVITY: cutting-edge physics research
-2. KINGDOM: evangelism and discipleship in PNG
+2. KINGDOM: evangelism and discipleship in Fiji and beyond
 3. Personal disciplines: prayer, Bible study, family devotion, bass guitar, coding, health
 
-Be concise, encouraging, faith-based, and practical. Speak to PNG context where relevant.
+Be concise, encouraging, faith-based, and practical. Speak to Fiji context where relevant.
 Keep responses to 2-4 sentences unless a longer analysis is requested."""
 
 
@@ -163,7 +163,7 @@ def _mock_weekly_analysis() -> str:
         "Excellent spiritual consistency this week — your 12-day prayer streak shows deep commitment. "
         "Coding output was strong Monday and Tuesday; focus on maintaining that momentum through mid-week. "
         "Two priorities for next week: (1) hit 7 hours of sleep nightly — your research quality will improve significantly, "
-        "and (2) drink 2.5L of water daily, especially critical in PNG's heat. Keep seeking first His kingdom — everything else will follow."
+        "and (2) drink 2.5L of water daily, especially critical in Fiji's heat. Keep seeking first His kingdom — everything else will follow."
     )
 
 
@@ -188,7 +188,7 @@ def _mock_daily_tip() -> str:
     tips = [
         "Your prayer streak is your greatest asset — protect it by starting each morning on your knees before your phone.",
         "Deep work sessions compound over time: one focused coding hour today is worth three distracted hours tomorrow.",
-        "Drink water now — staying hydrated in PNG's heat is spiritual self-care and sharpens your thinking.",
+        "Drink water now — staying hydrated in Fiji's heat is spiritual self-care and sharpens your thinking.",
         "Your research on antigravity and your kingdom work are connected — both require disciplined pursuit of truth.",
         "Family devotion shapes your children's eternity — no coding session is more important than that 30 minutes.",
     ]

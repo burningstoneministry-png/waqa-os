@@ -1,6 +1,6 @@
 """
 APScheduler — Background task scheduler
-Claude-Fire | Waqa | Papua New Guinea
+Claude-Fire | Waqa | Fiji
 
 Scheduled jobs:
 - 9 PM nightly: pull all APIs, compute score, send daily summary email
@@ -147,7 +147,7 @@ def job_check_all_notifications():
 
 def create_scheduler() -> BackgroundScheduler:
     """Create and configure the APScheduler instance."""
-    tz = "Pacific/Port_Moresby"  # UTC+10 PNG time
+    tz = "Pacific/Fiji"  # UTC+12 Fiji time
     scheduler = BackgroundScheduler(timezone=tz)
 
     # 9 PM nightly summary
@@ -177,7 +177,7 @@ def create_scheduler() -> BackgroundScheduler:
 
 if __name__ == "__main__":
     """Run scheduler as standalone process."""
-    logger.info("Starting Claude-Fire scheduler (Papua New Guinea / UTC+10)...")
+    logger.info("Starting Claude-Fire scheduler (Fiji / UTC+12)...")
     scheduler = create_scheduler()
     scheduler.start()
     logger.info("Scheduler running. Press Ctrl+C to stop.")

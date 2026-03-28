@@ -1,6 +1,6 @@
 -- ============================================================
 -- WAQA PERSONAL DISCIPLINE DASHBOARD — SUPABASE SCHEMA
--- Papua New Guinea | Claude-Fire Project
+-- Fiji | Claude-Fire Project
 -- ============================================================
 
 -- ACTIVITIES CATEGORIES (reference table)

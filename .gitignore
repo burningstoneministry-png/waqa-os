@@ -33,3 +33,9 @@ logs/
 
 # Static APK uploads
 backend/static/*.apk
+
+# Claude local settings
+.claude/
+
+# KKZ Learning (separate repo)
+kkzlearning/

@@ -1,6 +1,6 @@
 """
 WakaTime Service — Coding stats sync
-Claude-Fire | Waqa | Papua New Guinea
+Claude-Fire | Waqa | Fiji
 """
 
 import os

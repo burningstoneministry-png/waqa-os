@@ -1,6 +1,6 @@
 """
 OCR Service — Google Vision API with Tesseract fallback
-Claude-Fire | Waqa | Papua New Guinea
+Claude-Fire | Waqa | Fiji
 """
 
 import os

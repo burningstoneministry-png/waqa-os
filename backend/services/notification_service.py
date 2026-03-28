@@ -1,6 +1,6 @@
 """
 Notification Service — Check all alert conditions and send
-Claude-Fire | Waqa | Papua New Guinea
+Claude-Fire | Waqa | Fiji
 """
 
 import os
@@ -177,7 +177,7 @@ def send_monthly_prayer_report(month: int, year: int) -> dict:
         <p>Average session: 45 min</p>
         <p>Top themes: Vision, Family, Nation</p>
       </div>
-      <p style="color:#475569;font-size:12px;text-align:center;">Claude-Fire · Waqa · Papua New Guinea</p>
+      <p style="color:#475569;font-size:12px;text-align:center;">Claude-Fire · Waqa · Fiji</p>
     </div>
     """
     return send_email(to_email, subject, html)

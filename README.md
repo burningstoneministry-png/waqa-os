@@ -1,6 +1,6 @@
 # Claude-Fire Personal Discipline Dashboard
 
-**User:** Waqa | **Location:** Papua New Guinea | **Currency:** PGK (K)
+**User:** Waqa | **Location:** Fiji | **Currency:** FJD ($)
 
 A comprehensive personal discipline and life-tracking application built to help Waqa stay disciplined across spiritual life, work, health, finance, music, and mission — all from a mobile-first dashboard.
 
@@ -11,7 +11,7 @@ A comprehensive personal discipline and life-tracking application built to help 
 ### Two Missions
 
 1. **Antigravity Research** — cutting-edge physics research (tracked as research hours, notes, papers)
-2. **Kingdom Expansion** — evangelism and discipleship in PNG (souls counter, church activities, discipleship)
+2. **Kingdom Expansion** — evangelism and discipleship in Fiji and beyond (souls counter, church activities, discipleship)
 
 ### Disciplines Tracked
 
@@ -252,14 +252,14 @@ Photograph a handwritten diary page. Google Vision API (or Tesseract fallback) e
 ### Water Tracker
 Visual water bottle fills as you log. 2.5L daily goal. Reminders sent every 2 hours between 8AM and 8PM if goal not reached.
 
-### Finance (PGK)
-Tracks Westpac bank balance, M-Paisa mobile wallet, and cash spending in Papua New Guinea Kina (K). Monthly savings rate calculated automatically.
+### Finance (FJD)
+Tracks Westpac bank balance, M-Paisa mobile wallet, and cash spending in Fiji Dollars ($). Monthly savings rate calculated automatically.
 
 ---
 
 ## Timezone
 
-All times are in **UTC+10 (Pacific/Port_Moresby)** — Papua New Guinea Standard Time. No daylight saving time in PNG.
+All times are in **UTC+12 (Pacific/Fiji)** — Fiji Standard Time. No daylight saving time in Fiji.
 
 ---
 
@@ -274,5 +274,5 @@ All times are in **UTC+10 (Pacific/Port_Moresby)** — Papua New Guinea Standard
 
 ## Support
 
-Built by Claude for Waqa, Papua New Guinea.
+Built by Claude for Waqa, Fiji.
 "Seek first His kingdom, and all these things shall be added to you." — Matthew 6:33
