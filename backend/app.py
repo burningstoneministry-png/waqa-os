@@ -6,7 +6,7 @@ User: Waqa | Fiji
 import os
 import json
 from datetime import datetime, date, timedelta
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -1077,6 +1077,84 @@ def health_check():
         "user": "Waqa",
         "location": "Fiji"
     })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AI COACH — GROQ STREAMING CHAT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """Stream AI coach response word-by-word via SSE."""
+    data = request.json or {}
+    message = data.get("message", "").strip()
+    if not message:
+        return jsonify({"error": "message is required"}), 400
+
+    # Build live context snapshot
+    context_data = {
+        "xp": {
+            "today": 145,
+            "weekly": 840,
+            "weekly_goal": 1000,
+            "total": 45230,
+        },
+        "phase": {
+            "name": "Phase 1 — Foundation",
+            "progress_pct": 18.1,
+            "xp_required": 250000,
+        },
+        "habits": {
+            "prayer": True,
+            "bible": True,
+            "water": False,
+            "training": True,
+            "research": False,
+            "coding": True,
+            "bass": False,
+            "fasting": False,
+        },
+        "streaks": {
+            "prayer": 14,
+            "bible": 12,
+            "coding": 8,
+        },
+        "rewards": {
+            "tier1_eligible": False,
+        },
+    }
+
+    # Try to pull real data from Supabase if available
+    try:
+        sb = _get_supabase()
+        if sb:
+            xp_rows = sb.table("xp_logs").select("xp_earned").eq("log_date", date.today().isoformat()).execute()
+            if xp_rows.data:
+                context_data["xp"]["today"] = sum(r["xp_earned"] for r in xp_rows.data)
+    except Exception:
+        pass  # Fall back to mock context
+
+    from services.groq_service import stream_chat
+
+    def generate():
+        try:
+            for token in stream_chat(message, context_data):
+                # Escape token for SSE
+                payload = json.dumps({"token": token})
+                yield f"data: {payload}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
+import ChatWidget from "@/components/chat/ChatWidget";
 
 export const metadata: Metadata = {
   title: "Waqa-OS | Personal Discipline Dashboard",
@@ -31,6 +32,9 @@ export default function RootLayout({
 
         {/* Mobile bottom navigation */}
         <MobileNav />
+
+        {/* AI Coach — floating bubble on every page */}
+        <ChatWidget />
       </body>
     </html>
   );

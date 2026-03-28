@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ListTodo, Flame, Music, BookOpen,
   Activity, DollarSign, Target, Star, BarChart2,
   Zap, Sparkles, Trophy, Gift, MapPin, TrendingUp,
-  Moon, Youtube,
+  Moon, Youtube, Bot,
 } from "lucide-react";
 
 const navItems = [
@@ -19,6 +19,7 @@ const navItems = [
   { href: "/rewards", icon: Gift, label: "Rewards" },
   { href: "/tomorrow-plan", icon: Moon, label: "Tomorrow Plan" },
   { href: "/youtube", icon: Youtube, label: "YouTube" },
+  { href: "/chat", icon: Bot, label: "AI Coach" },
   { href: "/tasks", icon: ListTodo, label: "Tasks" },
   { href: "/prayer", icon: Flame, label: "Prayer" },
   { href: "/diary", icon: BookOpen, label: "Diary / OCR" },
