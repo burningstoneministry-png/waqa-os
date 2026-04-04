@@ -1,10 +1,18 @@
 // api/ocr.js — Vercel Serverless Function
-// Receives a base64 image from the frontend, calls Gemini Vision API,
-// returns structured diary data (date, activities, review).
+// Calls Gemini 1.5 Flash Vision with Waqa's diary-specific format guide.
+// Returns structured diary data: { date, activities[], review }
+
+const fs   = require('fs');
+const path = require('path');
+
+// Load Waqa's diary format guide — sent to Gemini on every request
+const DIARY_FORMAT = fs.readFileSync(
+    path.join(__dirname, '..', 'diary_format.md'),
+    'utf8'
+);
 
 module.exports = async function handler(req, res) {
-    // CORS headers so the static frontend can call this
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin',  '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -13,43 +21,26 @@ module.exports = async function handler(req, res) {
 
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) {
-        return res.status(500).json({ error: 'GEMINI_API_KEY environment variable not set in Vercel.' });
+        return res.status(500).json({ error: 'GEMINI_API_KEY not set in Vercel environment variables.' });
     }
 
     try {
         const { imageBase64, mimeType } = req.body;
         if (!imageBase64) return res.status(400).json({ error: 'No image provided.' });
 
-        // ── Prompt: tells Gemini exactly what to extract ──────────────────────
-        const prompt = `You are reading a handwritten personal diary page. Your job is to extract every piece of information visible and return it as a single valid JSON object — no markdown fences, no explanation, just the JSON.
+        // ── Build prompt from Waqa's personal diary format guide ─────────────
+        const prompt = `You are reading a handwritten diary page belonging to Waqa Atunaise.
+You have been given a detailed format guide that explains exactly how his diary is structured,
+what to extract, and what to ignore. Follow it precisely.
 
-Use this exact structure:
-{
-  "date": "YYYY-MM-DD",
-  "activities": [
-    {
-      "time": "HH:MM",
-      "activity": "clean activity description",
-      "duration": "e.g. 30 min or 1 hour, empty string if not shown",
-      "category": "spiritual | skills | health | general"
-    }
-  ],
-  "review": "any reflection, summary or notes at the bottom of the page"
-}
+TODAY'S DATE (use if date not legible): ${new Date().toISOString().slice(0, 10)}
 
-Category rules — assign the best match:
-• spiritual  → prayer, bible, devotion, fasting, worship, praise, meditation, church, scripture
-• skills     → reading, learning, coding, study, practice, guitar, writing, course, book, research
-• health     → exercise, water, food, eating, sleep, gym, run, walk, yoga, workout, steps
-• general    → anything that does not fit the above
+=== WAQA'S DIARY FORMAT GUIDE ===
+${DIARY_FORMAT}
+=== END OF FORMAT GUIDE ===
 
-Important:
-- Extract EVERY activity line you can read, even if partially legible
-- Clean up handwriting errors using context clues
-- If the date is not visible, use today's date: ${new Date().toISOString().slice(0, 10)}
-- Return times in 24-hour HH:MM format
-- "review" should be the full reflection text, or empty string if none
-- Return ONLY the raw JSON object, nothing else`;
+Now read the diary image provided and return ONLY a raw JSON object following the structure
+and rules in the guide above. No markdown, no explanation — just the JSON.`;
 
         // ── Call Gemini 1.5 Flash ─────────────────────────────────────────────
         const geminiRes = await fetch(
@@ -65,8 +56,8 @@ Important:
                         ]
                     }],
                     generationConfig: {
-                        temperature:     0.1,   // low temp = more precise extraction
-                        maxOutputTokens: 2048
+                        temperature:     0.1,   // low = precise, consistent extraction
+                        maxOutputTokens: 4096
                     }
                 })
             }
@@ -75,33 +66,29 @@ Important:
         if (!geminiRes.ok) {
             const errBody = await geminiRes.text();
             console.error('Gemini API error:', errBody);
-            return res.status(502).json({ error: 'Gemini API error: ' + geminiRes.status, detail: errBody });
+            return res.status(502).json({ error: 'Gemini API error ' + geminiRes.status, detail: errBody });
         }
 
         const geminiData = await geminiRes.json();
         const rawText    = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-        // ── Parse JSON from Gemini's response ────────────────────────────────
+        // ── Extract JSON from response ─────────────────────────────────────────
         const jsonMatch = rawText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
-            console.error('No JSON found in Gemini response:', rawText);
+            console.error('No JSON in Gemini response:', rawText);
             return res.status(502).json({ error: 'Gemini returned unexpected format.', raw: rawText });
         }
 
         const parsed = JSON.parse(jsonMatch[0]);
 
-        // ── Validate & normalise output ───────────────────────────────────────
+        // ── Validate & normalise ───────────────────────────────────────────────
         const validCats = ['spiritual', 'skills', 'health', 'general'];
-        if (parsed.activities) {
-            parsed.activities = parsed.activities.map(a => ({
-                time:     a.time     || '',
-                activity: a.activity || '',
-                duration: a.duration || '',
-                category: validCats.includes(a.category) ? a.category : 'general'
-            }));
-        } else {
-            parsed.activities = [];
-        }
+        parsed.activities = (parsed.activities || []).map(a => ({
+            time:     (a.time     || '').trim(),
+            activity: (a.activity || '').trim(),
+            duration: (a.duration || '').trim(),
+            category: validCats.includes(a.category) ? a.category : 'general'
+        }));
         if (!parsed.date)   parsed.date   = new Date().toISOString().slice(0, 10);
         if (!parsed.review) parsed.review = '';
 
