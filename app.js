@@ -451,33 +451,180 @@ function importOcrData() {
     showToast('OCR data imported! Review and save.', 'success');
 }
 
-// ─── Export / Import ──────────────────────────────────────────────────────────
-async function exportData() {
-    showToast('Exporting…', 'info');
-    const data = await storage.exportData();
-    const blob  = new Blob([data], { type: 'application/json' });
-    const url   = URL.createObjectURL(blob);
-    const a     = document.createElement('a');
-    a.href      = url;
-    a.download  = 'diary-tracker-export-' + new Date().toISOString().slice(0, 10) + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Data exported!', 'success');
+// ─── Dropdown toggle ─────────────────────────────────────────────────────────
+function toggleDropdown(id) {
+    const menu = document.getElementById(id);
+    document.querySelectorAll('.dropdown-menu').forEach(m => {
+        if (m.id !== id) m.classList.remove('open');
+    });
+    menu.classList.toggle('open');
+}
+document.addEventListener('click', e => {
+    if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+    }
+});
+
+// ─── Export as PDF ────────────────────────────────────────────────────────────
+async function exportAsPDF() {
+    document.getElementById('export-dropdown').classList.remove('open');
+    showToast('Building PDF…', 'info');
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const entries = await storage.getAllEntries();
+        const dates   = Object.keys(entries).sort().reverse();
+
+        // ── Title page ──
+        doc.setFillColor(13, 27, 75);
+        doc.rect(0, 0, 210, 297, 'F');
+        doc.setTextColor(245, 200, 66);
+        doc.setFontSize(30); doc.setFont('helvetica', 'bold');
+        doc.text('Diary Tracker', 105, 110, { align: 'center' });
+        doc.setFontSize(13); doc.setFont('helvetica', 'normal');
+        doc.setTextColor(180, 220, 255);
+        doc.text('Personal Journal Export', 105, 124, { align: 'center' });
+        doc.text('Exported: ' + new Date().toLocaleDateString(), 105, 136, { align: 'center' });
+        doc.text(dates.length + ' entries', 105, 146, { align: 'center' });
+
+        const catColors = {
+            spiritual: [216, 90, 48],
+            skills:    [99, 153, 34],
+            health:    [55, 138, 221],
+            general:   [130, 130, 130]
+        };
+
+        // ── One page per entry ──
+        for (const date of dates) {
+            const entry = entries[date];
+            if (!entry || !entry.activities || entry.activities.length === 0) continue;
+            doc.addPage();
+            let y = 20;
+
+            // Date header bar
+            doc.setFillColor(13, 27, 75);
+            doc.rect(0, 0, 210, 16, 'F');
+            doc.setTextColor(245, 200, 66);
+            doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+            const d = new Date(date + 'T00:00:00');
+            doc.text(d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), 10, 11);
+            y = 26;
+
+            // Activities
+            doc.setTextColor(30, 30, 30);
+            doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+            doc.text('Activities', 10, y); y += 7;
+
+            for (const act of entry.activities) {
+                if (y > 272) { doc.addPage(); y = 20; }
+                const col = catColors[act.category] || catColors.general;
+                doc.setFillColor(...col);
+                doc.roundedRect(10, y - 4.5, 3, 6, 1, 1, 'F');
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+                doc.setTextColor(30, 30, 30);
+                const line = `${act.time || '—'}   ${act.activity}${act.duration ? '  (' + act.duration + ')' : ''}`;
+                doc.text(line, 16, y); y += 8;
+            }
+
+            // Reflection box
+            if (entry.review) {
+                y += 4;
+                if (y > 262) { doc.addPage(); y = 20; }
+                const lines = doc.splitTextToSize(entry.review, 180);
+                doc.setFillColor(255, 251, 235);
+                doc.roundedRect(10, y - 5, 190, 10 + lines.length * 6, 2, 2, 'F');
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(100, 80, 0);
+                doc.text('Reflection', 14, y); y += 6;
+                doc.setFont('helvetica', 'italic'); doc.setTextColor(60, 60, 60);
+                doc.text(lines, 14, y);
+            }
+        }
+
+        doc.save('diary-tracker-' + new Date().toISOString().slice(0, 10) + '.pdf');
+        showToast('PDF exported! ✅', 'success');
+    } catch (e) {
+        console.error(e);
+        showToast('PDF failed: ' + e.message, 'error');
+    }
 }
 
-function importData() { document.getElementById('import-file').click(); }
+// ─── Export as PNG / JPEG ─────────────────────────────────────────────────────
+async function exportAsImage(fmt) {
+    document.getElementById('export-dropdown').classList.remove('open');
+    showToast('Capturing ' + fmt.toUpperCase() + '…', 'info');
+    try {
+        const el     = document.querySelector('main');
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#F7F8FA' });
+        const mime   = fmt === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const url    = canvas.toDataURL(mime, 0.95);
+        const a      = document.createElement('a');
+        a.href       = url;
+        a.download   = 'diary-tracker-' + new Date().toISOString().slice(0, 10) + '.' + fmt;
+        a.click();
+        showToast(fmt.toUpperCase() + ' exported! ✅', 'success');
+    } catch (e) {
+        console.error(e);
+        showToast('Image export failed: ' + e.message, 'error');
+    }
+}
 
-async function handleImportFile(event) {
+// ─── Import dispatcher ────────────────────────────────────────────────────────
+function importAs(type) {
+    document.getElementById('import-dropdown').classList.remove('open');
+    if (type === 'pdf')   document.getElementById('import-pdf-file').click();
+    if (type === 'image') document.getElementById('import-image-file').click();
+}
+
+// ─── Import PDF → render page → OCR ──────────────────────────────────────────
+async function handlePdfImport(event) {
     const file = event.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async e => {
-        showToast('Importing…', 'info');
-        const ok = await storage.importData(e.target.result);
-        if (ok) { showToast('Data imported successfully!', 'success'); renderDailySummary(); }
-        else     showToast('Invalid file format', 'error');
-    };
-    reader.readAsText(file);
+    showToast('Loading PDF…', 'info');
+    try {
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const buf      = await file.arrayBuffer();
+        const pdf      = await pdfjsLib.getDocument({ data: buf }).promise;
+        const page     = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas   = document.createElement('canvas');
+        canvas.width   = viewport.width;
+        canvas.height  = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+        showToast('PDF rendered — running OCR…', 'info');
+        showTab('photo');
+        const preview = document.getElementById('photo-preview');
+        preview.src   = canvas.toDataURL('image/png');
+        preview.style.display = 'block';
+        document.getElementById('ocr-progress').style.display = 'block';
+        document.getElementById('ocr-result').style.display   = 'none';
+        document.getElementById('import-btn').style.display   = 'none';
+
+        canvas.toBlob(async blob => {
+            try {
+                const result = await ocr.processImage(blob);
+                extractedOcrData = result;
+                displayOcrResult(result);
+                showToast('PDF OCR done! Review & import. ✅', 'success');
+            } catch (err) {
+                showToast('OCR failed: ' + err.message, 'error');
+                document.getElementById('ocr-progress').style.display = 'none';
+            }
+        }, 'image/png');
+    } catch (e) {
+        console.error(e);
+        showToast('PDF load failed: ' + e.message, 'error');
+    }
+}
+
+// ─── Import JPEG / PNG → OCR ──────────────────────────────────────────────────
+function handleImageImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    showTab('photo');
+    processOcrFile(file);
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────

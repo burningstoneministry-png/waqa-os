@@ -14,9 +14,26 @@
 <header>
     <h1>📔 Diary <span>Tracker</span></h1>
     <div class="header-actions">
-        <button class="btn-header" onclick="exportData()">⬇ Export</button>
-        <button class="btn-header" onclick="importData()">⬆ Import</button>
-        <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImportFile(event)">
+        <!-- Export dropdown -->
+        <div class="dropdown">
+            <button class="btn-header" onclick="toggleDropdown('export-dropdown')">⬇ Export ▾</button>
+            <div class="dropdown-menu" id="export-dropdown">
+                <button onclick="exportAsPDF()">📄 PDF Report</button>
+                <button onclick="exportAsImage('png')">🖼 PNG Image</button>
+                <button onclick="exportAsImage('jpeg')">🖼 JPEG Image</button>
+            </div>
+        </div>
+        <!-- Import dropdown -->
+        <div class="dropdown">
+            <button class="btn-header" onclick="toggleDropdown('import-dropdown')">⬆ Import ▾</button>
+            <div class="dropdown-menu" id="import-dropdown">
+                <button onclick="importAs('pdf')">📄 Import PDF</button>
+                <button onclick="importAs('image')">🖼 Import JPEG / PNG</button>
+            </div>
+        </div>
+        <!-- Hidden file inputs -->
+        <input type="file" id="import-pdf-file"   accept=".pdf"            style="display:none" onchange="handlePdfImport(event)">
+        <input type="file" id="import-image-file" accept=".jpg,.jpeg,.png" style="display:none" onchange="handleImageImport(event)">
     </div>
 </header>
 
@@ -168,6 +185,9 @@
 
 <!-- ─── Scripts ──────────────────────────────────────────────────────────── -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/2.1.5/tesseract.min.js"></script>
 <script src="storage.js"></script>
 <script src="ocr.js"></script>
