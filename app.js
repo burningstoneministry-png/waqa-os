@@ -403,6 +403,7 @@ function handlePhotoUpload(event) {
 }
 
 async function processOcrFile(file) {
+    // Show preview immediately
     const preview = document.getElementById('photo-preview');
     const reader  = new FileReader();
     reader.onload  = e => { preview.src = e.target.result; preview.style.display = 'block'; };
@@ -412,8 +413,27 @@ async function processOcrFile(file) {
     document.getElementById('ocr-progress').style.display = 'block';
     document.getElementById('import-btn').style.display   = 'none';
 
+    // Status callback — updates the progress label in real time
+    const onStatus = (msg) => {
+        const el = document.getElementById('ocr-status');
+        if (el) el.textContent = msg;
+        // Gemini is fast — animate the bar to show activity
+        const bar = document.getElementById('ocr-progress-bar');
+        if (bar) bar.style.width = '70%';
+    };
+
+    // Tesseract progress callback (fallback only)
+    const onProgress = (p) => {
+        const bar = document.getElementById('ocr-progress-bar');
+        const el  = document.getElementById('ocr-status');
+        if (bar) bar.style.width = (p.progress * 100) + '%';
+        if (el)  el.textContent  = p.status || 'Processing…';
+    };
+
     try {
-        const result = await ocr.processImage(file);
+        const result = await ocr.processImage(file, { onStatus, onProgress });
+        const bar = document.getElementById('ocr-progress-bar');
+        if (bar) bar.style.width = '100%';
         extractedOcrData = result;
         displayOcrResult(result);
     } catch (e) {
