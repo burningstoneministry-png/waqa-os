@@ -1194,49 +1194,54 @@ textarea { resize: vertical; min-height: 80px; }
 .month-heatmap {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    margin-top: 0.5rem;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
 }
 .heatmap-month {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
+    min-height: 18px;
 }
 .heatmap-month-label {
     font-size: 0.72rem;
     font-weight: 600;
     color: var(--text-muted);
-    width: 28px;
+    width: 30px;
     flex-shrink: 0;
     text-align: right;
 }
 .heatmap-days {
     display: flex;
-    gap: 3px;
-    flex-wrap: wrap;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 2px;
+    flex: 1;
+    overflow: hidden;
 }
 .heatmap-cell {
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
     flex-shrink: 0;
     cursor: default;
     transition: transform 0.1s;
 }
-.heatmap-cell:hover { transform: scale(1.3); }
-.heat-0 { background: #eee; }
+.heatmap-cell:hover { transform: scale(1.4); }
+.heat-0 { background: #e9ecef; }
 .heat-1 { background: #c8e6c9; }
 .heat-2 { background: #81c784; }
 .heat-3 { background: #4caf50; }
 .heat-4 { background: #2e7d32; }
 .heat-5 { background: #1b5e20; }
 
-/* Heatmap entry-count label */
+/* Heatmap count + prayer label on the right */
 .heatmap-count {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     color: var(--text-muted);
-    margin-left: 0.3rem;
     flex-shrink: 0;
+    white-space: nowrap;
+    min-width: 80px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════

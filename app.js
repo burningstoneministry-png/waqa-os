@@ -1190,15 +1190,26 @@ async function renderYearlyContent(allEntries, year) {
             }
         });
         const maxDays = Math.max(...monthlyDays, 1);
+        // Days in each month (approx) for generating per-day cells
+        const daysInMonth = [31,28,29,31,30,31,30,31,31,30,31,30];
         html += `<div class="yearly-section">
-            <div class="section-title">📅 Activity Heatmap by Month</div>
+            <div class="yearly-section-title">📅 Activity Heatmap by Month</div>
             <div class="month-heatmap">
                 ${months.map((m, i) => {
-                    const intensity = Math.round((monthlyDays[i] / maxDays) * 5);
+                    const logged   = monthlyDays[i];
+                    const dInM     = daysInMonth[i];
+                    const intensity = Math.round((logged / maxDays) * 5);
                     const prayerHrs = (agg.monthlyPrayer[i] / 60).toFixed(1);
-                    return `<div class="heatmap-cell heat-${intensity}" title="${m}: ${monthlyDays[i]} days logged, ${prayerHrs}hrs prayer">
-                        <div class="heatmap-month">${m}</div>
-                        <div class="heatmap-days">${monthlyDays[i]}d</div>
+                    // Generate one cell per day in the month, filled proportionally
+                    const filledCells = Math.round((logged / dInM) * dInM);
+                    const cells = Array.from({length: dInM}, (_, d) => {
+                        const cellIntensity = d < filledCells ? Math.max(1, intensity) : 0;
+                        return `<div class="heatmap-cell heat-${cellIntensity}" title="Day ${d+1}"></div>`;
+                    }).join('');
+                    return `<div class="heatmap-month">
+                        <span class="heatmap-month-label">${m}</span>
+                        <div class="heatmap-days">${cells}</div>
+                        <span class="heatmap-count">${logged}d · ${prayerHrs}h🙏</span>
                     </div>`;
                 }).join('')}
             </div>
