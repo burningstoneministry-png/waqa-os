@@ -25,7 +25,32 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        const { imageBase64, mimeType } = req.body;
+        const { imageBase64, mimeType, type, prompt: commentaryPrompt } = req.body;
+
+        // ── AI Commentary mode (text-only, no image) ──────────────────────────
+        if (type === 'commentary' && commentaryPrompt) {
+            const geminiRes = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: commentaryPrompt }]
+                        }],
+                        generationConfig: {
+                            temperature:     0.7,
+                            maxOutputTokens: 512
+                        }
+                    })
+                }
+            );
+            if (!geminiRes.ok) return res.status(502).json({ commentary: null });
+            const data = await geminiRes.json();
+            const commentary = data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            return res.status(200).json({ commentary });
+        }
+
         if (!imageBase64) return res.status(400).json({ error: 'No image provided.' });
 
         // ── Build prompt from Waqa's personal diary format guide ─────────────

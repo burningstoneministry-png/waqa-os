@@ -4,23 +4,54 @@ let activityCount    = 0;
 let currentTab       = 'daily';
 let extractedOcrData = null;
 
-// ─── Duration Parser ─────────────────────────────────────────────────────────
-// Converts duration strings like "30mins", "1hr", "1hr 30mins", "2hrs 30mins"
-// into total minutes (integer).
+// ─── Baselines (hardcoded — adjustable later) ─────────────────────────────────
+// All time baselines in MINUTES per day unless otherwise noted.
+const BASELINES = {
+    prayer:        120,   // 2hrs/day
+    bibleStudy:    30,    // 30mins/day
+    bookPages:     20,    // 20 pages/day (reasonable daily reading goal)
+    water:         1500,  // 1.5L/day (stored in ml for math)
+    exercise:      30,    // 30mins/day
+    coding:        3,     // 3 sessions/week  → assessed weekly
+    fasting:       3,     // 3 days/month     → assessed monthly
+    baseTraining:  3,     // 3 sessions/week  → assessed weekly
+    diaryUpdate:   1,     // 1 update/day     → consistency check
+};
+
+// Activity name → baseline key mapping (case-insensitive matching)
+const ACTIVITY_BASELINE_MAP = {
+    'prayer':         'prayer',
+    'bible study':    'bibleStudy',
+    'bible':          'bibleStudy',
+    'reading':        'bookPages',
+    'book':           'bookPages',
+    'books':          'bookPages',
+    'water':          'water',
+    'exercise':       'exercise',
+    'training':       'exercise',
+    'gym':            'exercise',
+    'walking':        'exercise',
+    'run':            'exercise',
+    'running':        'exercise',
+    'base training':  'baseTraining',
+    'coding':         'coding',
+    'code':           'coding',
+    'fasting':        'fasting',
+    'fast':           'fasting',
+};
+
+// ─── Duration Parser ──────────────────────────────────────────────────────────
 function parseDurationToMins(str) {
     if (!str || typeof str !== 'string') return 0;
     const s = str.trim().toLowerCase();
     let mins = 0;
-    // Match hours part  e.g. "2hr", "2hrs"
-    const hrMatch = s.match(/(\d+)\s*hrs?/);
-    if (hrMatch) mins += parseInt(hrMatch[1], 10) * 60;
-    // Match minutes part  e.g. "30mins", "30min"
+    const hrMatch  = s.match(/(\d+)\s*hrs?/);
+    if (hrMatch)  mins += parseInt(hrMatch[1],  10) * 60;
     const minMatch = s.match(/(\d+)\s*mins?/);
     if (minMatch) mins += parseInt(minMatch[1], 10);
     return mins;
 }
 
-// Convert minutes back to a human-readable string: "1hr 30mins", "45mins", etc.
 function minsToDisplay(totalMins) {
     if (!totalMins || totalMins <= 0) return '—';
     const h = Math.floor(totalMins / 60);
@@ -28,6 +59,19 @@ function minsToDisplay(totalMins) {
     if (h === 0) return `${m}mins`;
     if (m === 0) return h === 1 ? `1hr` : `${h}hrs`;
     return h === 1 ? `1hr ${m}mins` : `${h}hrs ${m}mins`;
+}
+
+// ─── Baseline Helpers ─────────────────────────────────────────────────────────
+function getBaselineKey(activityName) {
+    if (!activityName) return null;
+    const lower = activityName.trim().toLowerCase();
+    return ACTIVITY_BASELINE_MAP[lower] || null;
+}
+
+// Calculate percentage vs baseline, capped at 100% for display bars
+function baselinePct(actual, baseline) {
+    if (!baseline || baseline === 0) return 0;
+    return Math.min(Math.round((actual / baseline) * 100), 200); // allow showing over 100%
 }
 
 // ─── Daily Scripture (NKJV) ──────────────────────────────────────────────────
@@ -49,31 +93,19 @@ const SCRIPTURES = [
     { text: "Beloved, I pray that you may prosper in all things and be in health, just as your soul prospers.", ref: "3 John 1:2 (NKJV)" },
     { text: "And the LORD will make you the head and not the tail; you shall be above only, and not be beneath.", ref: "Deuteronomy 28:13 (NKJV)" },
     { text: "Trust in the LORD with all your heart, and lean not on your own understanding; in all your ways acknowledge Him, and He shall direct your paths.", ref: "Proverbs 3:5–6 (NKJV)" },
-    { text: "In the beginning God created the heavens and the earth. The earth was without form, and void; and the Spirit of God was hovering over the face of the waters.", ref: "Genesis 1:1–2 (NKJV)" },
     { text: "The LORD your God will bless you in all your produce and in all the work of your hands, so that you surely rejoice.", ref: "Deuteronomy 16:15 (NKJV)" },
     { text: "And whatever you do, do it heartily, as to the Lord and not to men.", ref: "Colossians 3:23 (NKJV)" },
     { text: "Without counsel, plans go awry, but in the multitude of counselors they are established.", ref: "Proverbs 15:22 (NKJV)" },
-    { text: "The heavens declare the glory of God; and the firmament shows His handiwork.", ref: "Psalm 19:1 (NKJV)" },
-    { text: "For God so loved the world that He gave His only begotten Son, that whoever believes in Him should not perish but have everlasting life.", ref: "John 3:16 (NKJV)" },
-    { text: "Jesus said to him, 'I am the way, the truth, and the life. No one comes to the Father except through Me.'", ref: "John 14:6 (NKJV)" },
-    { text: "So Jesus said to them, 'Because of your unbelief; for assuredly, I say to you, if you have faith as a mustard seed, you will say to this mountain, Move from here to there, and it will move; and nothing will be impossible for you.'", ref: "Matthew 17:20 (NKJV)" },
     { text: "The effective, fervent prayer of a righteous man avails much.", ref: "James 5:16 (NKJV)" },
-    { text: "And God is able to make all grace abound toward you, that you, always having all sufficiency in all things, may have an abundance for every good work.", ref: "2 Corinthians 9:8 (NKJV)" },
     { text: "But seek first the kingdom of God and His righteousness, and all these things shall be added to you.", ref: "Matthew 6:33 (NKJV)" },
-    { text: "But Jesus looked at them and said, 'With men it is impossible, but not with God; for with God all things are possible.'", ref: "Mark 10:27 (NKJV)" },
-    { text: "The thief does not come except to steal, and to kill, and to destroy. I have come that they may have life, and that they may have it more abundantly.", ref: "John 10:10 (NKJV)" },
     { text: "Delight yourself also in the LORD, and He shall give you the desires of your heart.", ref: "Psalm 37:4 (NKJV)" },
     { text: "The LORD is my shepherd; I shall not want.", ref: "Psalm 23:1 (NKJV)" },
-    { text: "Being confident of this very thing, that He who has begun a good work in you will complete it until the day of Jesus Christ.", ref: "Philippians 1:6 (NKJV)" },
     { text: "Now faith is the substance of things hoped for, the evidence of things not seen.", ref: "Hebrews 11:1 (NKJV)" },
     { text: "What then shall we say to these things? If God is for us, who can be against us?", ref: "Romans 8:31 (NKJV)" },
     { text: "The plans of the diligent lead surely to plenty, but those of everyone who is hasty, surely to poverty.", ref: "Proverbs 21:5 (NKJV)" },
     { text: "Let your light so shine before men, that they may see your good works and glorify your Father in heaven.", ref: "Matthew 5:16 (NKJV)" },
     { text: "For we are His workmanship, created in Christ Jesus for good works, which God prepared beforehand that we should walk in them.", ref: "Ephesians 2:10 (NKJV)" },
-    { text: "The LORD will open to you His good treasure, the heavens, to give the rain to your land in its season, and to bless all the work of your hand.", ref: "Deuteronomy 28:12 (NKJV)" },
     { text: "Be anxious for nothing, but in everything by prayer and supplication, with thanksgiving, let your requests be made known to God.", ref: "Philippians 4:6 (NKJV)" },
-    { text: "I will lift up my eyes to the hills — from whence comes my help? My help comes from the LORD, who made heaven and earth.", ref: "Psalm 121:1–2 (NKJV)" },
-    { text: "All things were made through Him, and without Him nothing was made that was made.", ref: "John 1:3 (NKJV)" },
     { text: "And we know that all things work together for good to those who love God, to those who are the called according to His purpose.", ref: "Romans 8:28 (NKJV)" },
     { text: "The LORD is my light and my salvation; whom shall I fear? The LORD is the strength of my life; of whom shall I be afraid?", ref: "Psalm 27:1 (NKJV)" },
 ];
@@ -85,24 +117,6 @@ function loadDailyScripture() {
     const refEl  = document.getElementById('scripture-ref');
     if (textEl) textEl.textContent = '\u201c' + s.text + '\u201d';
     if (refEl)  refEl.textContent  = '\u2014 ' + s.ref;
-}
-
-function generateStars() {
-    ['stars', 'stars2'].forEach((id, ci) => {
-        const c = document.getElementById(id);
-        if (!c) return;
-        const count = ci === 0 ? 60 : 30;
-        let html = '';
-        for (let i = 0; i < count; i++) {
-            const x    = Math.random() * 100;
-            const y    = Math.random() * 100;
-            const size = Math.random() * 1.5 + 0.5;
-            const delay = Math.random() * 5;
-            const dur   = Math.random() * 3 + 2;
-            html += `<span style="position:absolute;left:${x}%;top:${y}%;width:${size}px;height:${size}px;background:white;border-radius:50%;opacity:${(Math.random()*0.6+0.2).toFixed(2)};animation:twinkle ${dur.toFixed(1)}s ${delay.toFixed(1)}s ease-in-out infinite alternate;"></span>`;
-        }
-        c.innerHTML = html;
-    });
 }
 
 // ─── Tab Navigation ──────────────────────────────────────────────────────────
@@ -127,14 +141,13 @@ function buildPresetOptions() {
 }
 
 function selectPreset(el, name, category) {
-    // Find the row this dropdown belongs to
     const dropdown = el.closest('.preset-dropdown');
     const row      = dropdown.closest('.activity-row');
     if (!row) return;
     const textInput = row.querySelector('.act-text');
     const catSelect = row.querySelector('.act-category');
-    textInput.value     = name;
-    catSelect.value     = category;
+    textInput.value = name;
+    catSelect.value = category;
     const id = row.id.replace('activity-', '');
     updateCategoryColor(id, category);
     dropdown.classList.remove('open');
@@ -143,16 +156,13 @@ function selectPreset(el, name, category) {
 function togglePresetDropdown(btn) {
     const row      = btn.closest('.activity-row');
     const dropdown = row.querySelector('.preset-dropdown');
-    // Refresh contents
     dropdown.querySelector('.preset-list').innerHTML = buildPresetOptions();
-    // Close all others
     document.querySelectorAll('.preset-dropdown').forEach(d => {
         if (d !== dropdown) d.classList.remove('open');
     });
     dropdown.classList.toggle('open');
 }
 
-// Close preset dropdowns on outside click
 document.addEventListener('click', e => {
     if (!e.target.closest('.preset-toggle-btn') && !e.target.closest('.preset-dropdown')) {
         document.querySelectorAll('.preset-dropdown').forEach(d => d.classList.remove('open'));
@@ -198,14 +208,12 @@ function addNewPresetFromRow(btn) {
     const input = row.querySelector('.preset-add-input');
     const name  = input.value.trim();
     if (!name) return;
-    // Detect category from the activity row's current selection
     const actRow = btn.closest('.activity-row');
     const cat    = actRow ? actRow.querySelector('.act-category').value : 'general';
     const added  = storage.addPreset(name, cat);
     if (added) {
         showToast(`"${name}" saved to presets ✅`, 'success');
         input.value = '';
-        // Refresh the list
         row.querySelector('.preset-list').innerHTML = buildPresetOptions();
     } else {
         showToast('Already exists or empty', 'error');
@@ -217,10 +225,10 @@ function removeActivity(id) {
     if (rows.length <= 1) {
         const el = document.getElementById('activity-' + id);
         if (el) {
-            el.querySelector('.act-time').value      = '';
-            el.querySelector('.act-text').value      = '';
-            el.querySelector('.act-duration').value  = '';
-            el.querySelector('.act-category').value  = 'general';
+            el.querySelector('.act-time').value     = '';
+            el.querySelector('.act-text').value     = '';
+            el.querySelector('.act-duration').value = '';
+            el.querySelector('.act-category').value = 'general';
             updateCategoryColor(id, 'general');
         }
         return;
@@ -232,8 +240,7 @@ function removeActivity(id) {
 function autoCategorize(id) {
     const row = document.getElementById('activity-' + id);
     if (!row) return;
-    const text = row.querySelector('.act-text').value;
-    // Also try to match a preset category automatically
+    const text    = row.querySelector('.act-text').value;
     const presets = storage.getPresets();
     const match   = presets.find(p => p.name.toLowerCase() === text.trim().toLowerCase());
     const cat     = match ? match.category : ocr.categorizeActivity(text);
@@ -279,35 +286,28 @@ async function saveEntry() {
 }
 
 function resetForm() {
-    // Clear the form but keep today's date selected and one blank row
     document.getElementById('activities-container').innerHTML = '';
     document.getElementById('daily-review').value = '';
     activityCount = 0;
     addActivityField();
-    // Reset date to today
     document.getElementById('entry-date').value = new Date().toISOString().slice(0, 10);
+    window._editingFullList = null;
 }
 
-// ─── Load existing entry for a date (for reference only — not loaded into form)
-// The form is always FRESH. Existing entries ACCUMULATE via saveEntry append logic.
-// We only load when user explicitly switches to a date that already has data —
-// shown as a subtle info banner so they know data exists.
 async function loadEntryForDate() {
     const date = document.getElementById('entry-date').value;
     if (!date) return;
 
-    // Clear the form — start fresh for the selected date
     document.getElementById('activities-container').innerHTML = '';
     document.getElementById('daily-review').value = '';
     activityCount = 0;
-    addActivityField(); // one blank row ready
+    addActivityField();
 
     const entry = await storage.getEntry(date);
     if (entry && entry.activities && entry.activities.length > 0) {
         const totalMins = entry.activities.reduce((s, a) => s + parseDurationToMins(a.duration), 0);
         const summary   = minsToDisplay(totalMins);
         showToast(`${entry.activities.length} activities already saved for ${date} (${summary} total). New activities will be added to them.`, 'info');
-        // Show the existing activities count as a header above the form
         let banner = document.getElementById('existing-banner');
         if (!banner) {
             banner = document.createElement('div');
@@ -326,23 +326,157 @@ async function loadEntryForDate() {
     }
 }
 
-// Optional: let user load existing entries into form for editing
 async function loadExistingIntoForm(date) {
     const entry = await storage.getEntry(date);
     if (!entry || !entry.activities) return;
     document.getElementById('activities-container').innerHTML = '';
     activityCount = 0;
     entry.activities.forEach(a => addActivityField(a));
-    addActivityField(); // blank row for new
+    addActivityField();
     document.getElementById('daily-review').value = entry.review || '';
     showToast('Loaded all activities for editing. Saving will replace the full list for this date.', 'info');
-
-    // When editing the full list, we need to REPLACE not append.
-    // Flag this mode so saveEntry knows to replace.
     window._editingFullList = date;
-
     const banner = document.getElementById('existing-banner');
     if (banner) banner.innerHTML = `<span>✏️ Editing full list for ${date}. Saving will <strong>replace</strong> the entire day's activities.</span>`;
+}
+
+// ─── Aggregate activities into tracked metrics ────────────────────────────────
+// Returns an object with totals for each tracked activity type
+function aggregateActivities(activities) {
+    const result = {
+        prayerMins:      0,
+        bibleStudyMins:  0,
+        bookPages:       0,   // stored in notes as "X pages" or number field
+        waterMl:         0,   // stored as "Xml" or "Xl" in duration
+        exerciseMins:    0,
+        codingSessions:  0,
+        fastingDays:     0,   // count of full fasting activities
+        baseTrainingSessions: 0,
+        diaryUpdated:    true, // if this function is called, diary was updated
+        foodItems:       [],   // list of food descriptions
+        otherActivities: [],   // anything not in a known baseline
+        catMins:         { spiritual: 0, skills: 0, health: 0, general: 0 },
+        totalMins:       0,
+    };
+
+    (activities || []).forEach(a => {
+        const name  = (a.activity || '').trim().toLowerCase();
+        const mins  = parseDurationToMins(a.duration);
+        const cat   = a.category || 'general';
+
+        // accumulate category minutes
+        if (result.catMins[cat] !== undefined) result.catMins[cat] += mins;
+        result.totalMins += mins;
+
+        // Prayer
+        if (name.includes('prayer') || name.includes('pray')) {
+            result.prayerMins += mins;
+        }
+        // Bible Study
+        else if (name.includes('bible') || name.includes('devotion') || name.includes('bible study')) {
+            result.bibleStudyMins += mins;
+        }
+        // Reading / Books — look for page count in duration field e.g. "20 pages" or "20p"
+        else if (name.includes('reading') || name.includes('book')) {
+            const pageMatch = (a.duration || '').match(/(\d+)\s*(?:pages?|p\b)/i);
+            if (pageMatch) result.bookPages += parseInt(pageMatch[1], 10);
+            else result.bookPages += 0; // duration was time-based
+        }
+        // Water — look for ml/L in duration e.g. "1.5L" "500ml"
+        else if (name.includes('water')) {
+            const litreMatch = (a.duration || '').match(/([\d.]+)\s*l(?:itres?|iters?)?/i);
+            const mlMatch    = (a.duration || '').match(/([\d.]+)\s*ml/i);
+            if (litreMatch) result.waterMl += parseFloat(litreMatch[1]) * 1000;
+            else if (mlMatch) result.waterMl += parseFloat(mlMatch[1]);
+        }
+        // Food — record description
+        else if (name.includes('food') || name.includes('meal') || name.includes('eat') || name.includes('breakfast') || name.includes('lunch') || name.includes('dinner')) {
+            result.foodItems.push(a.activity);
+        }
+        // Exercise / Training
+        else if (name.includes('exercise') || name.includes('walking') || name.includes('walk') || name.includes('run') || name.includes('gym') || name.includes('training') || name.includes('workout')) {
+            result.exerciseMins += mins;
+        }
+        // Base Training (separate from general exercise)
+        else if (name.includes('base training')) {
+            result.baseTrainingSessions += 1;
+            result.exerciseMins += mins;
+        }
+        // Coding
+        else if (name.includes('coding') || name.includes('code') || name.includes('programming')) {
+            result.codingSessions += 1;
+        }
+        // Fasting
+        else if (name.includes('fast') || name.includes('fasting')) {
+            result.fastingDays += 1;
+        }
+        // Other
+        else {
+            result.otherActivities.push(a);
+        }
+    });
+
+    return result;
+}
+
+// ─── Render a baseline progress row ──────────────────────────────────────────
+function renderBaselineRow(icon, label, actualDisplay, pct, color, subLabel) {
+    const barPct = Math.min(pct, 100);
+    const pctLabel = pct > 100
+        ? `<span class="baseline-over">🎉 ${pct}%</span>`
+        : `<span class="baseline-pct ${pct >= 80 ? 'pct-good' : pct >= 50 ? 'pct-mid' : 'pct-low'}">${pct}%</span>`;
+    return `
+        <div class="baseline-row">
+            <div class="baseline-header">
+                <span class="baseline-icon">${icon}</span>
+                <span class="baseline-label">${label}</span>
+                <span class="baseline-actual">${actualDisplay}</span>
+                ${pctLabel}
+            </div>
+            ${subLabel ? `<div class="baseline-sublabel">${subLabel}</div>` : ''}
+            <div class="baseline-track">
+                <div class="baseline-fill" style="width:${barPct}%; background:${color};"></div>
+            </div>
+        </div>
+    `;
+}
+
+// ─── Gemini AI Commentary ─────────────────────────────────────────────────────
+async function getAICommentary(prompt) {
+    try {
+        const response = await fetch('/api/ocr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'commentary', prompt })
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.commentary || null;
+    } catch (e) {
+        console.warn('AI commentary unavailable:', e);
+        return null;
+    }
+}
+
+// ─── Category Summary Cards ───────────────────────────────────────────────────
+function renderCategoryCards(catMins, totalMins) {
+    const cats = [
+        { key: 'spiritual', label: 'Spiritual', icon: '🟠', color: 'var(--color-spiritual)' },
+        { key: 'skills',    label: 'Skills',    icon: '🟢', color: 'var(--color-skills)'    },
+        { key: 'health',    label: 'Health',    icon: '🔵', color: 'var(--color-health)'    },
+        { key: 'general',   label: 'General',   icon: '⚪', color: 'var(--color-general)'   },
+    ];
+    return `<div class="category-cards">${cats.map(c => {
+        const pct = totalMins > 0 ? Math.round((catMins[c.key] / totalMins) * 100) : 0;
+        return `
+            <div class="cat-summary-card" style="border-top: 4px solid ${c.color}">
+                <div class="cat-card-icon">${c.icon}</div>
+                <div class="cat-card-label">${c.label}</div>
+                <div class="cat-card-pct" style="color:${c.color}">${pct}%</div>
+                <div class="cat-card-time">${minsToDisplay(catMins[c.key])}</div>
+            </div>
+        `;
+    }).join('')}</div>`;
 }
 
 // ─── Daily Summary ────────────────────────────────────────────────────────────
@@ -358,38 +492,53 @@ async function renderDailySummary() {
         return;
     }
 
-    // Duration totals by category
-    const catMins  = { spiritual: 0, skills: 0, health: 0, general: 0 };
-    const catCount = { spiritual: 0, skills: 0, health: 0, general: 0 };
-    let   totalMins = 0;
+    const agg = aggregateActivities(entry.activities);
 
-    entry.activities.forEach(a => {
-        const m = parseDurationToMins(a.duration);
-        catMins[a.category]  = (catMins[a.category]  || 0) + m;
-        catCount[a.category] = (catCount[a.category] || 0) + 1;
-        totalMins += m;
-    });
+    // Prayer % vs 2hr baseline
+    const prayerPct    = baselinePct(agg.prayerMins,     BASELINES.prayer);
+    const biblePct     = baselinePct(agg.bibleStudyMins, BASELINES.bibleStudy);
+    const exercisePct  = baselinePct(agg.exerciseMins,   BASELINES.exercise);
+    const waterPct     = baselinePct(agg.waterMl,        BASELINES.water);
+    const bookPct      = agg.bookPages > 0 ? baselinePct(agg.bookPages, BASELINES.bookPages) : null;
+    const diaryPct     = 100; // logged today = 100%
 
-    const total = entry.activities.length;
-    const score = Math.round(((catCount.spiritual + catCount.skills + catCount.health) / total) * 100);
+    // Build AI commentary prompt
+    const aiPromptLines = [
+        `Today's diary log for Pastor Fire (${today}):`,
+        `- Prayer: ${minsToDisplay(agg.prayerMins)} (${prayerPct}% of 2hr baseline)`,
+        `- Bible Study: ${minsToDisplay(agg.bibleStudyMins)} (${biblePct}% of 30min baseline)`,
+        agg.bookPages > 0 ? `- Reading: ${agg.bookPages} pages (${bookPct}% of ${BASELINES.bookPages} pages baseline)` : '',
+        agg.foodItems.length > 0 ? `- Food logged: ${agg.foodItems.join(', ')}` : '',
+        agg.waterMl > 0 ? `- Water: ${(agg.waterMl/1000).toFixed(1)}L (${waterPct}% of 1.5L baseline)` : '',
+        `- Exercise: ${minsToDisplay(agg.exerciseMins)} (${exercisePct}% of 30min baseline)`,
+        `- Diary updated: Yes`,
+        agg.otherActivities.length > 0 ? `- Other: ${agg.otherActivities.map(o => o.activity).join(', ')}` : '',
+        `\nPlease give a short (3-4 sentences), warm, encouraging daily commentary. ` +
+        `Mention any standout achievements and gently note anything that fell short of the baseline. ` +
+        `For food, comment on whether it sounds balanced. ` +
+        `End with a motivating sentence for tomorrow.`
+    ].filter(Boolean).join('\n');
 
+    // Show UI first, then load commentary
     container.innerHTML = `
-        <div class="summary-score">
-            <div class="score-circle" style="--score:${score}">${score}<span>%</span></div>
-            <p>Today's Performance Score</p>
+        ${renderCategoryCards(agg.catMins, agg.totalMins)}
+        <div class="section-title">📊 Today's Activity Performance</div>
+        <div class="baseline-list">
+            ${renderBaselineRow('🙏', 'Prayer', minsToDisplay(agg.prayerMins), prayerPct, 'var(--color-spiritual)', `Baseline: 2hrs/day`)}
+            ${renderBaselineRow('📖', 'Bible Study', minsToDisplay(agg.bibleStudyMins), biblePct, 'var(--color-spiritual)', `Baseline: 30mins/day`)}
+            ${agg.bookPages > 0 ? renderBaselineRow('📚', 'Reading', `${agg.bookPages} pages`, bookPct, 'var(--color-skills)', `Baseline: ${BASELINES.bookPages} pages/day`) : ''}
+            ${agg.waterMl > 0 ? renderBaselineRow('💧', 'Water', `${(agg.waterMl/1000).toFixed(1)}L`, waterPct, 'var(--color-health)', `Baseline: 1.5L/day`) : ''}
+            ${renderBaselineRow('💪', 'Exercise', minsToDisplay(agg.exerciseMins), exercisePct, 'var(--color-health)', `Baseline: 30mins/day`)}
+            ${renderBaselineRow('📔', 'Diary Update', 'Logged ✓', 100, '#059669', 'Baseline: daily')}
+            ${agg.codingSessions > 0 ? renderBaselineRow('💻', 'Coding', `${agg.codingSessions} session${agg.codingSessions > 1 ? 's' : ''}`, Math.round((agg.codingSessions/3)*100*7), 'var(--color-skills)', 'Baseline: 3 sessions/week') : ''}
+            ${agg.fastingDays > 0 ? renderBaselineRow('🕊️', 'Fasting', `${agg.fastingDays} day${agg.fastingDays > 1 ? 's' : ''}`, Math.round((agg.fastingDays/3)*100), '#7c3aed', 'Monthly baseline: 3 days') : ''}
         </div>
-        <div class="duration-totals">
-            ${renderDurationTotal('🟠 Spiritual', catMins.spiritual, totalMins, 'spiritual')}
-            ${renderDurationTotal('🟢 Skills',    catMins.skills,    totalMins, 'skills')}
-            ${renderDurationTotal('🔵 Health',    catMins.health,    totalMins, 'health')}
-            ${catMins.general > 0 ? renderDurationTotal('⚪ General', catMins.general, totalMins, 'general') : ''}
-            <div class="duration-total-row total-row">
-                <span class="dur-label">Total Time</span>
-                <span class="dur-value">${minsToDisplay(totalMins)}</span>
-            </div>
-        </div>
+        ${agg.foodItems.length > 0 ? `
+        <div class="section-title">🍽️ Food Today</div>
+        <div class="food-list">${agg.foodItems.map(f => `<span class="food-tag">${f}</span>`).join('')}</div>
+        ` : ''}
+        <div class="section-title">📋 All Activities</div>
         <div class="activities-list">
-            <h3>Today's Activities</h3>
             ${entry.activities.map(a => `
                 <div class="activity-item cat-${a.category}">
                     <span class="act-time-badge">${a.time || '—'}</span>
@@ -400,30 +549,38 @@ async function renderDailySummary() {
             `).join('')}
         </div>
         ${entry.review ? `<div class="review-box"><strong>Reflection:</strong> ${entry.review}</div>` : ''}
-    `;
-}
-
-function renderDurationTotal(label, mins, totalMins, cat) {
-    const pct = totalMins > 0 ? Math.round((mins / totalMins) * 100) : 0;
-    return `
-        <div class="duration-total-row">
-            <span class="dur-label cat-${cat}">${label}</span>
-            <div class="dur-bar-track"><div class="dur-bar-fill cat-fill-${cat}" style="width:${pct}%"></div></div>
-            <span class="dur-value">${minsToDisplay(mins)}</span>
-            <span class="dur-pct">${pct}%</span>
+        <div class="ai-commentary-box" id="daily-ai-box">
+            <div class="ai-commentary-header">🤖 AI Daily Coach</div>
+            <div id="daily-ai-text" class="ai-commentary-loading">Generating commentary…</div>
         </div>
     `;
+
+    // Load AI commentary async
+    const commentary = await getAICommentary(aiPromptLines);
+    const aiEl = document.getElementById('daily-ai-text');
+    if (aiEl) {
+        aiEl.className = 'ai-commentary-text';
+        aiEl.textContent = commentary || generateFallbackDailyCommentary(agg, prayerPct, biblePct, exercisePct);
+    }
 }
 
-function renderCategoryBar(label, count, total, cat) {
-    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-    return `
-        <div class="cat-bar-row">
-            <span class="cat-label cat-${cat}">${label}</span>
-            <div class="cat-bar-track"><div class="cat-bar-fill cat-fill-${cat}" style="width:${pct}%"></div></div>
-            <span class="cat-count">${count} (${pct}%)</span>
-        </div>
-    `;
+function generateFallbackDailyCommentary(agg, prayerPct, biblePct, exercisePct) {
+    const lines = [];
+    if (prayerPct >= 100) lines.push('🙏 Outstanding — you hit your full 2-hour prayer goal today!');
+    else if (prayerPct >= 50) lines.push(`🙏 Good prayer time today (${prayerPct}% of your 2hr goal). Keep building that consistency.`);
+    else lines.push(`🙏 Prayer was below your 2hr baseline today (${prayerPct}%). Even short prayer sessions count — try to make up the difference tomorrow.`);
+
+    if (biblePct >= 100) lines.push('📖 Full Bible study baseline met — well done!');
+    else if (biblePct > 0) lines.push(`📖 Bible study was ${biblePct}% of your 30-min baseline. A little more each day adds up greatly.`);
+    else lines.push('📖 No Bible study logged today. Even 10 minutes of reading God\'s Word makes a difference.');
+
+    if (exercisePct >= 100) lines.push('💪 Exercise goal crushed — your body and mind will thank you!');
+    else if (exercisePct > 0) lines.push(`💪 Got some movement in (${exercisePct}% of baseline) — great start!`);
+
+    if (agg.foodItems.length > 0) lines.push(`🍽️ Food logged: ${agg.foodItems.join(', ')}. Aim for balanced meals with vegetables, protein and complex carbs.`);
+
+    lines.push('Keep going — consistency is what builds character. Tomorrow is a fresh opportunity!');
+    return lines.join(' ');
 }
 
 // ─── Weekly View ──────────────────────────────────────────────────────────────
@@ -431,34 +588,57 @@ async function renderWeeklyView() {
     const container = document.getElementById('weekly-content');
     container.innerHTML = '<div class="empty-state"><span>⏳</span><p>Loading from Supabase…</p></div>';
 
-    const entries   = await storage.getWeekEntries();
-    const days      = [];
+    const entries = await storage.getWeekEntries();
+    const days    = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
         days.push(d.toISOString().slice(0, 10));
     }
 
-    const dayNames   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const totalMins  = { spiritual: 0, skills: 0, health: 0, general: 0 };
-    const totalCount = { spiritual: 0, skills: 0, health: 0, general: 0 };
-    let   grandMins  = 0;
-    let gridHtml     = '<div class="week-grid">';
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    // Weekly aggregates
+    const weekAgg = {
+        prayerMins:      0,
+        bibleStudyMins:  0,
+        bookPages:       0,
+        waterMl:         0,
+        exerciseMins:    0,
+        codingSessions:  0,
+        fastingDays:     0,
+        baseTrainingSessions: 0,
+        diaryDays:       0,
+        catMins:         { spiritual: 0, skills: 0, health: 0, general: 0 },
+        totalMins:       0,
+    };
+
+    let   gridHtml   = '<div class="week-grid">';
+    const daysLogged = [];
 
     days.forEach(day => {
-        const entry   = entries[day];
-        const d       = new Date(day + 'T00:00:00');
-        const isToday = day === new Date().toISOString().slice(0, 10);
-        const hasEntry= entry && entry.activities && entry.activities.length > 0;
-        const dayMins = { spiritual: 0, skills: 0, health: 0 };
+        const entry    = entries[day];
+        const d        = new Date(day + 'T00:00:00');
+        const isToday  = day === new Date().toISOString().slice(0, 10);
+        const hasEntry = entry && entry.activities && entry.activities.length > 0;
+        const dayMins  = { spiritual: 0, skills: 0, health: 0 };
 
         if (hasEntry) {
-            entry.activities.forEach(a => {
-                const m = parseDurationToMins(a.duration);
-                if (dayMins[a.category]   !== undefined) dayMins[a.category]   += m;
-                if (totalMins[a.category] !== undefined) totalMins[a.category] += m;
-                if (totalCount[a.category]!== undefined) totalCount[a.category]++;
-                grandMins += m;
+            daysLogged.push(day);
+            weekAgg.diaryDays++;
+            const dayAgg = aggregateActivities(entry.activities);
+            weekAgg.prayerMins           += dayAgg.prayerMins;
+            weekAgg.bibleStudyMins       += dayAgg.bibleStudyMins;
+            weekAgg.bookPages            += dayAgg.bookPages;
+            weekAgg.waterMl              += dayAgg.waterMl;
+            weekAgg.exerciseMins         += dayAgg.exerciseMins;
+            weekAgg.codingSessions       += dayAgg.codingSessions;
+            weekAgg.fastingDays          += dayAgg.fastingDays;
+            weekAgg.baseTrainingSessions += dayAgg.baseTrainingSessions;
+            ['spiritual','skills','health','general'].forEach(c => {
+                weekAgg.catMins[c] += dayAgg.catMins[c];
+                if (dayMins[c] !== undefined) dayMins[c] = dayAgg.catMins[c];
             });
+            weekAgg.totalMins += dayAgg.totalMins;
         }
 
         const dayTotalMins = dayMins.spiritual + dayMins.skills + dayMins.health;
@@ -468,8 +648,8 @@ async function renderWeeklyView() {
                 <div class="day-date">${d.getDate()}</div>
                 <div class="day-dots">
                     ${dayMins.spiritual > 0 ? `<span class="dot dot-spiritual" title="Spiritual: ${minsToDisplay(dayMins.spiritual)}"></span>` : ''}
-                    ${dayMins.skills    > 0 ? `<span class="dot dot-skills"    title="Skills: ${minsToDisplay(dayMins.skills)}"></span>`       : ''}
-                    ${dayMins.health    > 0 ? `<span class="dot dot-health"    title="Health: ${minsToDisplay(dayMins.health)}"></span>`       : ''}
+                    ${dayMins.skills    > 0 ? `<span class="dot dot-skills"    title="Skills: ${minsToDisplay(dayMins.skills)}"></span>` : ''}
+                    ${dayMins.health    > 0 ? `<span class="dot dot-health"    title="Health: ${minsToDisplay(dayMins.health)}"></span>` : ''}
                 </div>
                 <div class="day-count">${hasEntry ? minsToDisplay(dayTotalMins) : '—'}</div>
             </div>
@@ -477,30 +657,81 @@ async function renderWeeklyView() {
     });
     gridHtml += '</div>';
 
-    const totalActs  = Object.values(totalCount).reduce((s, v) => s + v, 0);
-    const weekScore  = totalActs > 0 ? Math.round(((totalCount.spiritual + totalCount.skills + totalCount.health) / totalActs) * 100) : 0;
-    const daysLogged = days.filter(d => entries[d] && entries[d].activities && entries[d].activities.length > 0).length;
+    // Weekly baselines
+    const weeklyPrayerBaseline   = BASELINES.prayer * 7;      // 14hrs
+    const weeklyBibleBaseline    = BASELINES.bibleStudy * 7;  // 3.5hrs
+    const weeklyExerciseBaseline = BASELINES.exercise * 7;    // 3.5hrs
+
+    const prayerPct   = baselinePct(weekAgg.prayerMins,     weeklyPrayerBaseline);
+    const biblePct    = baselinePct(weekAgg.bibleStudyMins, weeklyBibleBaseline);
+    const exercisePct = baselinePct(weekAgg.exerciseMins,   weeklyExerciseBaseline);
+    const codingPct   = baselinePct(weekAgg.codingSessions, BASELINES.coding);       // 3 sessions/wk
+    const trainPct    = baselinePct(weekAgg.baseTrainingSessions, BASELINES.baseTraining); // 3/wk
+    const diaryPct    = baselinePct(weekAgg.diaryDays, 7);
+
+    // AI prompt
+    const aiPrompt = [
+        `Weekly diary summary for Pastor Fire:`,
+        `- Prayer: ${minsToDisplay(weekAgg.prayerMins)} / 14hrs baseline (${prayerPct}%)`,
+        `- Bible Study: ${minsToDisplay(weekAgg.bibleStudyMins)} / 3.5hrs baseline (${biblePct}%)`,
+        weekAgg.bookPages > 0 ? `- Reading: ${weekAgg.bookPages} pages this week` : '',
+        weekAgg.waterMl > 0 ? `- Water avg: ${((weekAgg.waterMl/1000)/weekAgg.diaryDays).toFixed(1)}L/day` : '',
+        `- Exercise: ${minsToDisplay(weekAgg.exerciseMins)} / 3.5hrs baseline (${exercisePct}%)`,
+        `- Coding sessions: ${weekAgg.codingSessions} / 3 baseline (${codingPct}%)`,
+        `- Base training sessions: ${weekAgg.baseTrainingSessions} / 3 baseline (${trainPct}%)`,
+        `- Diary logged: ${weekAgg.diaryDays}/7 days (${diaryPct}%)`,
+        weekAgg.fastingDays > 0 ? `- Fasting: ${weekAgg.fastingDays} day(s) this week` : '',
+        `\nGive a 3-4 sentence weekly performance review. Be warm and pastoral in tone. ` +
+        `Highlight strengths, note what needs work. ` +
+        `Compare prayer hours to the 14hr weekly standard. Mention consistency of diary updates. ` +
+        `End with an encouraging word for the coming week.`
+    ].filter(Boolean).join('\n');
 
     container.innerHTML = `
-        <div class="week-stats">
-            <div class="stat-card"><div class="stat-num">${daysLogged}/7</div><div class="stat-label">Days Logged</div></div>
-            <div class="stat-card"><div class="stat-num">${totalActs}</div><div class="stat-label">Total Activities</div></div>
-            <div class="stat-card"><div class="stat-num">${minsToDisplay(grandMins)}</div><div class="stat-label">Total Hours</div></div>
-            <div class="stat-card"><div class="stat-num">${weekScore}%</div><div class="stat-label">Week Score</div></div>
-        </div>
+        ${renderCategoryCards(weekAgg.catMins, weekAgg.totalMins)}
+        <div class="section-title mt-1">📅 7-Day Calendar</div>
         ${gridHtml}
-        <h3 style="margin:1.5rem 0 0.75rem; font-size:1rem; color:var(--text-muted);">Time by Category This Week</h3>
-        <div class="duration-totals">
-            ${renderDurationTotal('🟠 Spiritual', totalMins.spiritual, grandMins, 'spiritual')}
-            ${renderDurationTotal('🟢 Skills',    totalMins.skills,    grandMins, 'skills')}
-            ${renderDurationTotal('🔵 Health',    totalMins.health,    grandMins, 'health')}
-            ${totalMins.general > 0 ? renderDurationTotal('⚪ General', totalMins.general, grandMins, 'general') : ''}
-            <div class="duration-total-row total-row">
-                <span class="dur-label">Total Time</span>
-                <span class="dur-value">${minsToDisplay(grandMins)}</span>
-            </div>
+        <div class="section-title mt-1">📊 Weekly Performance vs Baselines</div>
+        <div class="baseline-list">
+            ${renderBaselineRow('🙏', 'Prayer',   minsToDisplay(weekAgg.prayerMins),     prayerPct,   'var(--color-spiritual)', `Baseline: 14hrs/week (2hrs × 7)`)}
+            ${renderBaselineRow('📖', 'Bible Study', minsToDisplay(weekAgg.bibleStudyMins), biblePct, 'var(--color-spiritual)', `Baseline: 3.5hrs/week (30min × 7)`)}
+            ${weekAgg.bookPages > 0 ? renderBaselineRow('📚', 'Reading', `${weekAgg.bookPages} pages`, baselinePct(weekAgg.bookPages, BASELINES.bookPages * 7), 'var(--color-skills)', `Baseline: ${BASELINES.bookPages * 7} pages/week`) : ''}
+            ${renderBaselineRow('💪', 'Exercise', minsToDisplay(weekAgg.exerciseMins),    exercisePct, 'var(--color-health)', `Baseline: 3.5hrs/week`)}
+            ${renderBaselineRow('💻', 'Coding',   `${weekAgg.codingSessions} sessions`,   codingPct,   'var(--color-skills)', `Baseline: 3 sessions/week`)}
+            ${renderBaselineRow('🏋️', 'Base Training', `${weekAgg.baseTrainingSessions} sessions`, trainPct, 'var(--color-health)', `Baseline: 3 sessions/week`)}
+            ${renderBaselineRow('📔', 'Diary Updates', `${weekAgg.diaryDays}/7 days`,     diaryPct,    '#059669', `Baseline: daily`)}
+            ${weekAgg.fastingDays > 0 ? renderBaselineRow('🕊️', 'Fasting', `${weekAgg.fastingDays} day(s)`, Math.round((weekAgg.fastingDays/3)*100), '#7c3aed', 'Monthly baseline: 3 days') : ''}
+        </div>
+        <div class="ai-commentary-box" id="weekly-ai-box">
+            <div class="ai-commentary-header">🤖 AI Weekly Coach</div>
+            <div id="weekly-ai-text" class="ai-commentary-loading">Generating weekly review…</div>
         </div>
     `;
+
+    // Load AI commentary
+    const commentary = await getAICommentary(aiPrompt);
+    const aiEl = document.getElementById('weekly-ai-text');
+    if (aiEl) {
+        aiEl.className = 'ai-commentary-text';
+        aiEl.textContent = commentary || generateFallbackWeeklyCommentary(weekAgg, prayerPct, diaryPct);
+    }
+}
+
+function generateFallbackWeeklyCommentary(agg, prayerPct, diaryPct) {
+    const lines = [];
+    if (prayerPct >= 100) lines.push(`🙏 Phenomenal — you hit your full 14-hour weekly prayer goal! That's a powerful foundation.`);
+    else if (prayerPct >= 50) lines.push(`🙏 You reached ${prayerPct}% of your 14hr prayer goal. That's solid effort — keep pushing toward the full baseline.`);
+    else lines.push(`🙏 Prayer time was ${prayerPct}% of the 14hr weekly goal. Try to carve out more dedicated prayer time each morning.`);
+
+    if (diaryPct >= 100) lines.push('📔 Perfect diary consistency this week — that discipline is building a powerful habit!');
+    else if (diaryPct >= 70) lines.push(`📔 You logged ${agg.diaryDays} of 7 days. Great consistency — try to close the gap next week.`);
+    else lines.push(`📔 Diary was updated ${agg.diaryDays}/7 days. Daily logging helps you stay accountable — prioritise it.`);
+
+    if (agg.codingSessions >= BASELINES.coding) lines.push('💻 Coding sessions baseline met — great skill investment!');
+    if (agg.exerciseMins >= BASELINES.exercise * 7) lines.push('💪 Full exercise baseline hit this week — your health is a priority!');
+
+    lines.push('A new week is ahead — bring everything you\'ve got. God\'s mercies are new every morning!');
+    return lines.join(' ');
 }
 
 // ─── Monthly Review ───────────────────────────────────────────────────────────
@@ -511,83 +742,132 @@ async function renderMonthlyReview() {
     const entries    = await storage.getMonthEntries();
     const today      = new Date();
     const daysSoFar  = today.getDate();
-    const totalMins  = { spiritual: 0, skills: 0, health: 0, general: 0 };
-    const totalCount = { spiritual: 0, skills: 0, health: 0, general: 0 };
-    let   grandMins  = 0;
-    let   daysLogged = 0;
+    const monthName  = today.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    const monthAgg = {
+        prayerMins:      0,
+        bibleStudyMins:  0,
+        bookPages:       0,
+        waterMl:         0,
+        exerciseMins:    0,
+        codingSessions:  0,
+        fastingDays:     0,
+        baseTrainingSessions: 0,
+        diaryDays:       0,
+        catMins:         { spiritual: 0, skills: 0, health: 0, general: 0 },
+        totalMins:       0,
+        bibleTopics:     [],
+    };
 
     Object.values(entries).forEach(entry => {
-        if (entry.activities && entry.activities.length > 0) {
-            daysLogged++;
-            entry.activities.forEach(a => {
-                const m = parseDurationToMins(a.duration);
-                if (totalMins[a.category]  !== undefined) totalMins[a.category]  += m;
-                if (totalCount[a.category] !== undefined) totalCount[a.category]++;
-                grandMins += m;
-            });
-        }
+        if (!entry.activities || entry.activities.length === 0) return;
+        monthAgg.diaryDays++;
+        const dayAgg = aggregateActivities(entry.activities);
+        monthAgg.prayerMins           += dayAgg.prayerMins;
+        monthAgg.bibleStudyMins       += dayAgg.bibleStudyMins;
+        monthAgg.bookPages            += dayAgg.bookPages;
+        monthAgg.waterMl              += dayAgg.waterMl;
+        monthAgg.exerciseMins         += dayAgg.exerciseMins;
+        monthAgg.codingSessions       += dayAgg.codingSessions;
+        monthAgg.fastingDays          += dayAgg.fastingDays;
+        monthAgg.baseTrainingSessions += dayAgg.baseTrainingSessions;
+        ['spiritual','skills','health','general'].forEach(c => {
+            monthAgg.catMins[c] += dayAgg.catMins[c];
+        });
+        monthAgg.totalMins += dayAgg.totalMins;
     });
 
-    const consistency = Math.round((daysLogged / daysSoFar) * 100);
-    const totalActs   = Object.values(totalCount).reduce((s, v) => s + v, 0);
-    const monthScore  = totalActs > 0 ? Math.round(((totalCount.spiritual + totalCount.skills + totalCount.health) / totalActs) * 100) : 0;
-    const insights    = generateInsights(totalCount, daysLogged, daysSoFar, consistency);
+    const consistency = Math.round((monthAgg.diaryDays / daysSoFar) * 100);
+
+    // Monthly baselines
+    const monthlyPrayerBaseline   = BASELINES.prayer * daysSoFar;      // 2hrs × days
+    // Special celebrated milestone: 60hrs prayer/month
+    const prayerHrs    = monthAgg.prayerMins / 60;
+    const prayerMilestone = prayerHrs >= 60;
+    const prayerPct    = baselinePct(monthAgg.prayerMins, monthlyPrayerBaseline);
+    const biblePct     = baselinePct(monthAgg.bibleStudyMins, BASELINES.bibleStudy * daysSoFar);
+    const exercisePct  = baselinePct(monthAgg.exerciseMins,   BASELINES.exercise * daysSoFar);
+    const fastingPct   = baselinePct(monthAgg.fastingDays,    BASELINES.fasting);  // 3 days/month
+    const diaryPct     = consistency;
+
+    // Weeks elapsed for coding/training
+    const weeksElapsed = Math.max(1, Math.ceil(daysSoFar / 7));
+    const codingPct    = baselinePct(monthAgg.codingSessions,      BASELINES.coding * weeksElapsed);
+    const trainPct     = baselinePct(monthAgg.baseTrainingSessions, BASELINES.baseTraining * weeksElapsed);
+
+    const aiPrompt = [
+        `Monthly diary summary for Pastor Fire — ${monthName}:`,
+        `- Prayer: ${prayerHrs.toFixed(1)}hrs (baseline: 60hrs/month, actual %: ${prayerPct}%)`,
+        prayerMilestone ? '  🎉 MILESTONE: 60hrs prayer goal ACHIEVED this month!' : '',
+        `- Bible Study: ${minsToDisplay(monthAgg.bibleStudyMins)} (${biblePct}% of baseline)`,
+        monthAgg.bookPages > 0 ? `- Reading: ${monthAgg.bookPages} total pages this month` : '',
+        `- Exercise: ${minsToDisplay(monthAgg.exerciseMins)} (${exercisePct}% of baseline)`,
+        `- Fasting: ${monthAgg.fastingDays} days / 3-day baseline (${fastingPct}%)`,
+        `- Coding: ${monthAgg.codingSessions} sessions (${codingPct}% of baseline)`,
+        `- Base Training: ${monthAgg.baseTrainingSessions} sessions (${trainPct}%)`,
+        `- Diary Consistency: ${monthAgg.diaryDays}/${daysSoFar} days (${diaryPct}%)`,
+        `\nWrite a 4-5 sentence monthly performance review in a warm pastoral tone. ` +
+        `Celebrate the 60hr prayer milestone if achieved. ` +
+        `Comment on Bible study topics and suggest areas for next month. ` +
+        `Compare reading to high-performing leaders who read heavily (like reading 1-2 books per month). ` +
+        `Be specific about fasting consistency. End with a powerful motivational close for the month ahead.`
+    ].filter(Boolean).join('\n');
 
     container.innerHTML = `
-        <div class="month-header">
-            <h3>${today.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+        <div class="month-header"><h3>${monthName}</h3></div>
+        ${prayerMilestone ? `<div class="milestone-banner">🎉 PRAYER MILESTONE: You've hit 60 hours of prayer this month! This is a celebration!</div>` : ''}
+        ${renderCategoryCards(monthAgg.catMins, monthAgg.totalMins)}
+        <div class="section-title mt-1">📈 Monthly Performance vs Baselines</div>
+        <div class="baseline-list">
+            ${renderBaselineRow('🙏', 'Prayer', `${prayerHrs.toFixed(1)}hrs`, prayerPct, 'var(--color-spiritual)', `Baseline: 60hrs/month (2hrs × days)`)}
+            ${renderBaselineRow('📖', 'Bible Study', minsToDisplay(monthAgg.bibleStudyMins), biblePct, 'var(--color-spiritual)', `Baseline: 30mins × ${daysSoFar} days`)}
+            ${monthAgg.bookPages > 0 ? renderBaselineRow('📚', 'Reading', `${monthAgg.bookPages} pages`, baselinePct(monthAgg.bookPages, BASELINES.bookPages * daysSoFar), 'var(--color-skills)', `Baseline: ${BASELINES.bookPages * daysSoFar} pages this month`) : ''}
+            ${renderBaselineRow('💪', 'Exercise', minsToDisplay(monthAgg.exerciseMins), exercisePct, 'var(--color-health)', `Baseline: 30mins × ${daysSoFar} days`)}
+            ${renderBaselineRow('🕊️', 'Fasting', `${monthAgg.fastingDays} day(s)`, fastingPct, '#7c3aed', 'Baseline: 3 days/month')}
+            ${renderBaselineRow('💻', 'Coding', `${monthAgg.codingSessions} sessions`, codingPct, 'var(--color-skills)', `Baseline: 3 sessions/week`)}
+            ${renderBaselineRow('🏋️', 'Base Training', `${monthAgg.baseTrainingSessions} sessions`, trainPct, 'var(--color-health)', `Baseline: 3 sessions/week`)}
+            ${renderBaselineRow('📔', 'Diary Consistency', `${monthAgg.diaryDays}/${daysSoFar} days`, diaryPct, '#059669', 'Baseline: daily')}
         </div>
-        <div class="week-stats">
-            <div class="stat-card"><div class="stat-num">${consistency}%</div><div class="stat-label">Consistency</div></div>
-            <div class="stat-card"><div class="stat-num">${daysLogged}/${daysSoFar}</div><div class="stat-label">Days Logged</div></div>
-            <div class="stat-card"><div class="stat-num">${minsToDisplay(grandMins)}</div><div class="stat-label">Total Hours</div></div>
-            <div class="stat-card"><div class="stat-num">${monthScore}%</div><div class="stat-label">Month Score</div></div>
-        </div>
-        <h3 style="margin:1.5rem 0 0.75rem; font-size:1rem; color:var(--text-muted);">Time by Category This Month</h3>
-        <div class="duration-totals">
-            ${renderDurationTotal('🟠 Spiritual', totalMins.spiritual, grandMins, 'spiritual')}
-            ${renderDurationTotal('🟢 Skills',    totalMins.skills,    grandMins, 'skills')}
-            ${renderDurationTotal('🔵 Health',    totalMins.health,    grandMins, 'health')}
-            ${totalMins.general > 0 ? renderDurationTotal('⚪ General', totalMins.general, grandMins, 'general') : ''}
-            <div class="duration-total-row total-row">
-                <span class="dur-label">Total Time</span>
-                <span class="dur-value">${minsToDisplay(grandMins)}</span>
-            </div>
-        </div>
-        <div class="insights-box">
-            <h3>💡 Insights</h3>
-            ${insights.map(i => `<div class="insight-item">${i}</div>`).join('')}
+        <div class="ai-commentary-box" id="monthly-ai-box">
+            <div class="ai-commentary-header">🤖 AI Monthly Coach</div>
+            <div id="monthly-ai-text" class="ai-commentary-loading">Generating monthly review…</div>
         </div>
     `;
+
+    const commentary = await getAICommentary(aiPrompt);
+    const aiEl = document.getElementById('monthly-ai-text');
+    if (aiEl) {
+        aiEl.className = 'ai-commentary-text';
+        aiEl.textContent = commentary || generateFallbackMonthlyCommentary(monthAgg, prayerPct, prayerMilestone, fastingPct, diaryPct);
+    }
 }
 
-function generateInsights(cats, daysLogged, daysSoFar, consistency) {
-    const insights = [];
-    const total    = cats.spiritual + cats.skills + cats.health + cats.general;
+function generateFallbackMonthlyCommentary(agg, prayerPct, milestone, fastingPct, diaryPct) {
+    const lines = [];
+    const prayerHrs = (agg.prayerMins / 60).toFixed(1);
 
-    if      (consistency >= 80) insights.push('🌟 Excellent consistency! You\'ve logged ' + daysLogged + ' out of ' + daysSoFar + ' days this month.');
-    else if (consistency >= 50) insights.push('👍 Good effort! Try to log every day for better tracking.');
-    else                        insights.push('📝 Start building your daily journaling habit — even 5 minutes counts!');
+    if (milestone) {
+        lines.push(`🎉 CELEBRATION: You have reached 60 hours of prayer this month — this is a spiritual achievement worth celebrating! God honours a praying heart.`);
+    } else if (prayerPct >= 70) {
+        lines.push(`🙏 Strong prayer month — ${prayerHrs}hrs logged (${prayerPct}% of the 60hr goal). You're building a powerful prayer life.`);
+    } else {
+        lines.push(`🙏 Prayer time was ${prayerHrs}hrs this month (${prayerPct}% of the 60hr baseline). Make prayer the first priority — it shifts everything else.`);
+    }
 
-    if (total === 0) { insights.push('📭 No activities logged yet this month. Start writing today!'); return insights; }
+    if (agg.bookPages > 0) {
+        lines.push(`📚 You read ${agg.bookPages} pages this month. Leaders like those who read extensively invest in their mind daily — keep building that habit.`);
+    } else {
+        lines.push(`📚 No book reading was logged this month. Consider starting with 20 pages a day — that's roughly a book a month and will transform your thinking.`);
+    }
 
-    const spiritualPct = Math.round((cats.spiritual / total) * 100);
-    const skillsPct    = Math.round((cats.skills    / total) * 100);
-    const healthPct    = Math.round((cats.health    / total) * 100);
+    if (fastingPct >= 100) lines.push(`🕊️ Fasting goal met — all 3 days completed. This discipline sharpens your spiritual sensitivity.`);
+    else if (agg.fastingDays > 0) lines.push(`🕊️ ${agg.fastingDays} of 3 fasting days done — good start, aim for the full 3 next month.`);
+    else lines.push(`🕊️ No fasting logged this month. Consider incorporating 3 days of fasting — it deepens your spiritual discipline.`);
 
-    if (spiritualPct === 0) insights.push('🙏 No spiritual activities logged. Consider adding prayer or devotion to your routine.');
-    else if (spiritualPct >= 30) insights.push(`🙏 Strong spiritual focus at ${spiritualPct}% — keep nurturing your faith!`);
+    if (diaryPct >= 80) lines.push(`📔 Excellent diary consistency (${diaryPct}%) — that discipline is tracking your growth beautifully.`);
 
-    if (skillsPct === 0) insights.push('📚 No skill-building logged. Try adding reading or learning sessions.');
-    else if (skillsPct >= 30) insights.push(`📚 Great skill development at ${skillsPct}% — you\'re investing in your growth!`);
-
-    if (healthPct === 0) insights.push('💪 No health activities logged. Consider adding exercise or tracking water intake.');
-    else if (healthPct >= 30) insights.push(`💪 Solid health focus at ${healthPct}% — your body will thank you!`);
-
-    const dominant = Object.entries(cats).sort((a, b) => b[1] - a[1])[0];
-    if (dominant[1] > 0) insights.push(`⭐ Your strongest category this month is <strong>${dominant[0]}</strong> with ${dominant[1]} activities.`);
-
-    return insights;
+    lines.push('Enter the new month with intention and faith. Your consistency today is building the leader of tomorrow!');
+    return lines.join(' ');
 }
 
 // ─── OCR / Photo Upload ───────────────────────────────────────────────────────
@@ -619,18 +899,17 @@ async function processOcrFile(file) {
     document.getElementById('ocr-progress').style.display = 'block';
     document.getElementById('import-btn').style.display   = 'none';
 
-    const onStatus = (msg) => {
-        const el = document.getElementById('ocr-status');
-        if (el) el.textContent = msg;
+    const onStatus   = (msg) => {
+        const el  = document.getElementById('ocr-status');
         const bar = document.getElementById('ocr-progress-bar');
-        if (bar) bar.style.width = '70%';
+        if (el)  el.textContent    = msg;
+        if (bar) bar.style.width   = '70%';
     };
-
     const onProgress = (p) => {
         const bar = document.getElementById('ocr-progress-bar');
         const el  = document.getElementById('ocr-status');
-        if (bar) bar.style.width = (p.progress * 100) + '%';
-        if (el)  el.textContent  = p.status || 'Processing…';
+        if (bar) bar.style.width  = (p.progress * 100) + '%';
+        if (el)  el.textContent   = p.status || 'Processing…';
     };
 
     try {
@@ -697,161 +976,89 @@ async function exportAsPDF() {
         const doc     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const entries = await storage.getAllEntries();
         const dates   = Object.keys(entries).sort().reverse();
+        let y = 20;
 
-        doc.setFillColor(13, 27, 75);
-        doc.rect(0, 0, 210, 297, 'F');
-        doc.setTextColor(245, 200, 66);
-        doc.setFontSize(30); doc.setFont('helvetica', 'bold');
-        doc.text('Diary Tracker', 105, 110, { align: 'center' });
-        doc.setFontSize(13); doc.setFont('helvetica', 'normal');
-        doc.setTextColor(180, 220, 255);
-        doc.text('Personal Journal Export', 105, 124, { align: 'center' });
-        doc.text('Exported: ' + new Date().toLocaleDateString(), 105, 136, { align: 'center' });
-        doc.text(dates.length + ' entries', 105, 146, { align: 'center' });
+        doc.setFontSize(18); doc.text('📔 Diary Tracker Report', 20, y); y += 12;
+        doc.setFontSize(10); doc.setTextColor(100);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, y); y += 10;
 
-        const catColors = {
-            spiritual: [216, 90, 48],
-            skills:    [99, 153, 34],
-            health:    [55, 138, 221],
-            general:   [130, 130, 130]
-        };
-
-        for (const date of dates) {
+        dates.forEach(date => {
             const entry = entries[date];
-            if (!entry || !entry.activities || entry.activities.length === 0) continue;
-            doc.addPage();
-            let y = 20;
+            if (!entry.activities || entry.activities.length === 0) return;
+            if (y > 260) { doc.addPage(); y = 20; }
+            doc.setFontSize(13); doc.setTextColor(15, 52, 96);
+            doc.text(date, 20, y); y += 8;
 
-            doc.setFillColor(13, 27, 75);
-            doc.rect(0, 0, 210, 16, 'F');
-            doc.setTextColor(245, 200, 66);
-            doc.setFontSize(13); doc.setFont('helvetica', 'bold');
-            const d = new Date(date + 'T00:00:00');
-            doc.text(d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), 10, 11);
-            y = 26;
+            const agg = aggregateActivities(entry.activities);
+            doc.setFontSize(9); doc.setTextColor(80);
+            if (agg.prayerMins > 0) { doc.text(`🙏 Prayer: ${minsToDisplay(agg.prayerMins)}`, 25, y); y += 5; }
 
-            doc.setTextColor(30, 30, 30);
-            doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-            doc.text('Activities', 10, y); y += 7;
-
-            for (const act of entry.activities) {
-                if (y > 272) { doc.addPage(); y = 20; }
-                const col = catColors[act.category] || catColors.general;
-                doc.setFillColor(...col);
-                doc.roundedRect(10, y - 4.5, 3, 6, 1, 1, 'F');
-                doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
-                doc.setTextColor(30, 30, 30);
-                const line = `${act.time || '—'}   ${act.activity}${act.duration ? '  (' + act.duration + ')' : ''}`;
-                doc.text(line, 16, y); y += 8;
-            }
-
-            // Duration totals
-            const catM = { spiritual: 0, skills: 0, health: 0, general: 0 };
             entry.activities.forEach(a => {
-                if (catM[a.category] !== undefined) catM[a.category] += parseDurationToMins(a.duration);
+                if (y > 270) { doc.addPage(); y = 20; }
+                doc.setFontSize(9); doc.setTextColor(40);
+                doc.text(`  ${a.time || '--'} | ${a.activity} | ${a.duration || ''}`, 25, y);
+                y += 5;
             });
-            const grandM = Object.values(catM).reduce((s, v) => s + v, 0);
-            if (grandM > 0) {
-                y += 4;
-                if (y > 272) { doc.addPage(); y = 20; }
-                doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(60, 60, 80);
-                doc.text(`Total: ${minsToDisplay(grandM)}  |  Spiritual: ${minsToDisplay(catM.spiritual)}  |  Skills: ${minsToDisplay(catM.skills)}  |  Health: ${minsToDisplay(catM.health)}`, 10, y);
-                y += 8;
-            }
+            y += 4;
+        });
 
-            if (entry.review) {
-                y += 4;
-                if (y > 262) { doc.addPage(); y = 20; }
-                const lines = doc.splitTextToSize(entry.review, 180);
-                doc.setFillColor(255, 251, 235);
-                doc.roundedRect(10, y - 5, 190, 10 + lines.length * 6, 2, 2, 'F');
-                doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(100, 80, 0);
-                doc.text('Reflection', 14, y); y += 6;
-                doc.setFont('helvetica', 'italic'); doc.setTextColor(60, 60, 60);
-                doc.text(lines, 14, y);
-            }
-        }
-
-        doc.save('diary-tracker-' + new Date().toISOString().slice(0, 10) + '.pdf');
-        showToast('PDF exported! ✅', 'success');
+        doc.save('diary-report.pdf');
+        showToast('PDF exported ✅', 'success');
     } catch (e) {
         console.error(e);
-        showToast('PDF failed: ' + e.message, 'error');
+        showToast('PDF export failed', 'error');
     }
 }
 
-// ─── Export as PNG / JPEG ─────────────────────────────────────────────────────
-async function exportAsImage(fmt) {
+// ─── Export as Image ──────────────────────────────────────────────────────────
+async function exportAsImage(format) {
     document.getElementById('export-dropdown').classList.remove('open');
-    showToast('Capturing ' + fmt.toUpperCase() + '…', 'info');
+    showToast('Capturing image…', 'info');
     try {
-        const el     = document.querySelector('main');
-        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#F7F8FA' });
-        const mime   = fmt === 'jpeg' ? 'image/jpeg' : 'image/png';
-        const url    = canvas.toDataURL(mime, 0.95);
-        const a      = document.createElement('a');
-        a.href       = url;
-        a.download   = 'diary-tracker-' + new Date().toISOString().slice(0, 10) + '.' + fmt;
-        a.click();
-        showToast(fmt.toUpperCase() + ' exported! ✅', 'success');
+        const el      = document.querySelector('.tab-content.active');
+        const canvas  = await html2canvas(el, { scale: 2 });
+        const imgData = canvas.toDataURL(`image/${format}`);
+        const link    = document.createElement('a');
+        link.href     = imgData;
+        link.download = `diary-export.${format}`;
+        link.click();
+        showToast(`${format.toUpperCase()} exported ✅`, 'success');
     } catch (e) {
         console.error(e);
-        showToast('Image export failed: ' + e.message, 'error');
+        showToast('Image export failed', 'error');
     }
 }
 
-// ─── Import dispatcher ────────────────────────────────────────────────────────
+// ─── Import ───────────────────────────────────────────────────────────────────
 function importAs(type) {
     document.getElementById('import-dropdown').classList.remove('open');
     if (type === 'pdf')   document.getElementById('import-pdf-file').click();
     if (type === 'image') document.getElementById('import-image-file').click();
 }
 
-// ─── Import PDF → render page → OCR ──────────────────────────────────────────
 async function handlePdfImport(event) {
     const file = event.target.files[0];
     if (!file) return;
-    showToast('Loading PDF…', 'info');
+    showToast('Reading PDF…', 'info');
     try {
-        const pdfjsLib = window['pdfjs-dist/build/pdf'];
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        const buf      = await file.arrayBuffer();
-        const pdf      = await pdfjsLib.getDocument({ data: buf }).promise;
-        const page     = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 2.0 });
-        const canvas   = document.createElement('canvas');
-        canvas.width   = viewport.width;
-        canvas.height  = viewport.height;
-        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-
-        showToast('PDF rendered — running OCR…', 'info');
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(item => item.str).join(' ') + '\n';
+        }
+        const result = ocr.parseText(text);
+        extractedOcrData = result;
         showTab('photo');
-        const preview = document.getElementById('photo-preview');
-        preview.src   = canvas.toDataURL('image/png');
-        preview.style.display = 'block';
-        document.getElementById('ocr-progress').style.display = 'block';
-        document.getElementById('ocr-result').style.display   = 'none';
-        document.getElementById('import-btn').style.display   = 'none';
-
-        canvas.toBlob(async blob => {
-            try {
-                const result = await ocr.processImage(blob);
-                extractedOcrData = result;
-                displayOcrResult(result);
-                showToast('PDF OCR done! Review & import. ✅', 'success');
-            } catch (err) {
-                showToast('OCR failed: ' + err.message, 'error');
-                document.getElementById('ocr-progress').style.display = 'none';
-            }
-        }, 'image/png');
+        displayOcrResult(result);
+        showToast('PDF parsed ✅', 'success');
     } catch (e) {
-        console.error(e);
-        showToast('PDF load failed: ' + e.message, 'error');
+        showToast('PDF import failed: ' + e.message, 'error');
     }
 }
 
-// ─── Import JPEG / PNG → OCR ──────────────────────────────────────────────────
 function handleImageImport(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -860,27 +1067,27 @@ function handleImageImport(event) {
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
-function showToast(message, type = 'info') {
-    const toast    = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className   = 'toast toast-' + type + ' show';
-    setTimeout(() => toast.classList.remove('show'), 4000);
+function showToast(msg, type = 'info') {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className   = `toast toast-${type} show`;
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.classList.remove('show'); }, 4000);
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
     storage.init();
-
-    // Set today's date, but do NOT load existing entry (form starts fresh)
-    const dateInput = document.getElementById('entry-date');
-    dateInput.value = new Date().toISOString().slice(0, 10);
-
-    // When user changes date, show info about existing data but keep form fresh
-    dateInput.addEventListener('change', loadEntryForDate);
-
-    addActivityField(); // one blank row ready
-    setupDropzone();
     loadDailyScripture();
-    generateStars();
-    showTab('write');   // Start on Write tab so form is ready
+    setupDropzone();
+
+    // Set today's date
+    document.getElementById('entry-date').value = new Date().toISOString().slice(0, 10);
+    addActivityField();
+
+    // Load entry info when date changes
+    document.getElementById('entry-date').addEventListener('change', loadEntryForDate);
+
+    // Show daily tab by default
+    renderDailySummary();
 });
