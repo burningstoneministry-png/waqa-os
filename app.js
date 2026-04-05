@@ -918,7 +918,7 @@ function filterYearlyActivity(filter, btn) {
     renderYearlyContent(yearlyAllEntries, parseInt(document.getElementById('year-selector').value) || new Date().getFullYear());
 }
 
-function renderYearlyContent(allEntries, year) {
+async function renderYearlyContent(allEntries, year) {
     const container = document.getElementById('yearly-content');
     const finCards  = document.getElementById('yearly-finance-cards');
 
