@@ -32,13 +32,28 @@ const storage = {
     },
 
     // ── CRUD ─────────────────────────────────────────────────────────────────
+
+    /**
+     * saveEntry: APPENDS new activities to any existing ones for this date.
+     * It never overwrites — existing activities for the date are kept,
+     * and the new activities are added to the end of the array.
+     * The review text is replaced with the latest value.
+     */
     async saveEntry(date, entry) {
+        // 1. Fetch any existing entry for this date
+        const existing = await this.getEntry(date);
+        const existingActivities = (existing && existing.activities) ? existing.activities : [];
+
+        // 2. Merge: keep existing, append new ones
+        const mergedActivities = [...existingActivities, ...(entry.activities || [])];
+
+        // 3. Upsert the merged array
         const { data, error } = await this.client
             .from('diary_entries')
             .upsert({
                 date,
-                activities: entry.activities || [],
-                review:     entry.review     || '',
+                activities: mergedActivities,
+                review:     entry.review || (existing ? existing.review : '') || '',
                 saved_at:   new Date().toISOString()
             }, { onConflict: 'date' })
             .select();
@@ -125,5 +140,55 @@ const storage = {
             console.error('importData parse error:', e);
             return false;
         }
+    },
+
+    // ── Activity Presets ─────────────────────────────────────────────────────
+    // Saved in localStorage for simplicity (no extra table needed).
+    // Format: { name: string, category: string }[]
+
+    getPresets() {
+        try {
+            const raw = localStorage.getItem('activity_presets');
+            return raw ? JSON.parse(raw) : this._defaultPresets();
+        } catch (e) {
+            return this._defaultPresets();
+        }
+    },
+
+    savePresets(presets) {
+        localStorage.setItem('activity_presets', JSON.stringify(presets));
+    },
+
+    addPreset(name, category) {
+        const presets = this.getPresets();
+        const trimmed = name.trim();
+        if (!trimmed) return false;
+        // Avoid exact duplicate names
+        if (presets.find(p => p.name.toLowerCase() === trimmed.toLowerCase())) return false;
+        presets.push({ name: trimmed, category: category || 'general' });
+        this.savePresets(presets);
+        return true;
+    },
+
+    removePreset(name) {
+        const presets = this.getPresets().filter(p => p.name !== name);
+        this.savePresets(presets);
+    },
+
+    _defaultPresets() {
+        return [
+            { name: 'Prayer',           category: 'spiritual' },
+            { name: 'Bible Study',      category: 'spiritual' },
+            { name: 'Devotion',         category: 'spiritual' },
+            { name: 'Fasting',          category: 'spiritual' },
+            { name: 'Worship',          category: 'spiritual' },
+            { name: 'Sermon Prep',      category: 'spiritual' },
+            { name: 'Exercise',         category: 'health'    },
+            { name: 'Walking',          category: 'health'    },
+            { name: 'Reading',          category: 'skills'    },
+            { name: 'Study',            category: 'skills'    },
+            { name: 'Coding',           category: 'skills'    },
+            { name: 'Meeting',          category: 'general'   }
+        ];
     }
 };

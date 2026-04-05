@@ -1,8 +1,34 @@
 // app.js - Main application logic (Supabase-powered)
 
-let activityCount   = 0;
-let currentTab      = 'daily';
+let activityCount    = 0;
+let currentTab       = 'daily';
 let extractedOcrData = null;
+
+// ─── Duration Parser ─────────────────────────────────────────────────────────
+// Converts duration strings like "30mins", "1hr", "1hr 30mins", "2hrs 30mins"
+// into total minutes (integer).
+function parseDurationToMins(str) {
+    if (!str || typeof str !== 'string') return 0;
+    const s = str.trim().toLowerCase();
+    let mins = 0;
+    // Match hours part  e.g. "2hr", "2hrs"
+    const hrMatch = s.match(/(\d+)\s*hrs?/);
+    if (hrMatch) mins += parseInt(hrMatch[1], 10) * 60;
+    // Match minutes part  e.g. "30mins", "30min"
+    const minMatch = s.match(/(\d+)\s*mins?/);
+    if (minMatch) mins += parseInt(minMatch[1], 10);
+    return mins;
+}
+
+// Convert minutes back to a human-readable string: "1hr 30mins", "45mins", etc.
+function minsToDisplay(totalMins) {
+    if (!totalMins || totalMins <= 0) return '—';
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    if (h === 0) return `${m}mins`;
+    if (m === 0) return h === 1 ? `1hr` : `${h}hrs`;
+    return h === 1 ? `1hr ${m}mins` : `${h}hrs ${m}mins`;
+}
 
 // ─── Daily Scripture (NKJV) ──────────────────────────────────────────────────
 const SCRIPTURES = [
@@ -50,7 +76,6 @@ const SCRIPTURES = [
     { text: "All things were made through Him, and without Him nothing was made that was made.", ref: "John 1:3 (NKJV)" },
     { text: "And we know that all things work together for good to those who love God, to those who are the called according to His purpose.", ref: "Romans 8:28 (NKJV)" },
     { text: "The LORD is my light and my salvation; whom shall I fear? The LORD is the strength of my life; of whom shall I be afraid?", ref: "Psalm 27:1 (NKJV)" },
-    { text: "Delight yourself also in the LORD, and He shall give you the desires of your heart.", ref: "Psalm 37:4 (NKJV)" },
 ];
 
 function loadDailyScripture() {
@@ -93,6 +118,47 @@ function showTab(tab) {
     if (tab === 'monthly') renderMonthlyReview();
 }
 
+// ─── Activity Presets Dropdown ────────────────────────────────────────────────
+function buildPresetOptions() {
+    const presets = storage.getPresets();
+    return presets.map(p =>
+        `<div class="preset-option cat-${p.category}" onclick="selectPreset(this, '${p.name.replace(/'/g,"\\'")}', '${p.category}')">${p.name}</div>`
+    ).join('');
+}
+
+function selectPreset(el, name, category) {
+    // Find the row this dropdown belongs to
+    const dropdown = el.closest('.preset-dropdown');
+    const row      = dropdown.closest('.activity-row');
+    if (!row) return;
+    const textInput = row.querySelector('.act-text');
+    const catSelect = row.querySelector('.act-category');
+    textInput.value     = name;
+    catSelect.value     = category;
+    const id = row.id.replace('activity-', '');
+    updateCategoryColor(id, category);
+    dropdown.classList.remove('open');
+}
+
+function togglePresetDropdown(btn) {
+    const row      = btn.closest('.activity-row');
+    const dropdown = row.querySelector('.preset-dropdown');
+    // Refresh contents
+    dropdown.querySelector('.preset-list').innerHTML = buildPresetOptions();
+    // Close all others
+    document.querySelectorAll('.preset-dropdown').forEach(d => {
+        if (d !== dropdown) d.classList.remove('open');
+    });
+    dropdown.classList.toggle('open');
+}
+
+// Close preset dropdowns on outside click
+document.addEventListener('click', e => {
+    if (!e.target.closest('.preset-toggle-btn') && !e.target.closest('.preset-dropdown')) {
+        document.querySelectorAll('.preset-dropdown').forEach(d => d.classList.remove('open'));
+    }
+});
+
 // ─── Activity Fields ─────────────────────────────────────────────────────────
 function addActivityField(prefill = {}) {
     activityCount++;
@@ -103,8 +169,18 @@ function addActivityField(prefill = {}) {
     div.id = 'activity-' + id;
     div.innerHTML = `
         <input type="time" class="act-time" value="${prefill.time || ''}" placeholder="Time">
-        <input type="text" class="act-text" value="${prefill.activity || ''}" placeholder="Activity description..." oninput="autoCategorize(${id})">
-        <input type="text" class="act-duration" value="${prefill.duration || ''}" placeholder="Duration (e.g. 1hr)">
+        <div class="act-text-wrap">
+            <input type="text" class="act-text" value="${prefill.activity || ''}" placeholder="Activity..." oninput="autoCategorize(${id})">
+            <button class="preset-toggle-btn" onclick="togglePresetDropdown(this)" title="Pick saved activity">▾</button>
+            <div class="preset-dropdown">
+                <div class="preset-list">${buildPresetOptions()}</div>
+                <div class="preset-add-row">
+                    <input class="preset-add-input" type="text" placeholder="Add new activity name...">
+                    <button onclick="addNewPresetFromRow(this)">+ Save</button>
+                </div>
+            </div>
+        </div>
+        <input type="text" class="act-duration" value="${prefill.duration || ''}" placeholder="e.g. 1hr 30mins">
         <select class="act-category" onchange="updateCategoryColor(${id}, this.value)">
             <option value="general"  ${prefill.category === 'general'  ? 'selected' : ''}>General</option>
             <option value="spiritual"${prefill.category === 'spiritual' ? 'selected' : ''}>🟠 Spiritual</option>
@@ -117,16 +193,34 @@ function addActivityField(prefill = {}) {
     updateCategoryColor(id, prefill.category || 'general');
 }
 
+function addNewPresetFromRow(btn) {
+    const row   = btn.closest('.preset-dropdown');
+    const input = row.querySelector('.preset-add-input');
+    const name  = input.value.trim();
+    if (!name) return;
+    // Detect category from the activity row's current selection
+    const actRow = btn.closest('.activity-row');
+    const cat    = actRow ? actRow.querySelector('.act-category').value : 'general';
+    const added  = storage.addPreset(name, cat);
+    if (added) {
+        showToast(`"${name}" saved to presets ✅`, 'success');
+        input.value = '';
+        // Refresh the list
+        row.querySelector('.preset-list').innerHTML = buildPresetOptions();
+    } else {
+        showToast('Already exists or empty', 'error');
+    }
+}
+
 function removeActivity(id) {
     const rows = document.querySelectorAll('.activity-row');
     if (rows.length <= 1) {
-        // Don't remove the last row — just clear it instead
         const el = document.getElementById('activity-' + id);
         if (el) {
-            el.querySelector('.act-time').value = '';
-            el.querySelector('.act-text').value = '';
-            el.querySelector('.act-duration').value = '';
-            el.querySelector('.act-category').value = 'general';
+            el.querySelector('.act-time').value      = '';
+            el.querySelector('.act-text').value      = '';
+            el.querySelector('.act-duration').value  = '';
+            el.querySelector('.act-category').value  = 'general';
             updateCategoryColor(id, 'general');
         }
         return;
@@ -139,7 +233,10 @@ function autoCategorize(id) {
     const row = document.getElementById('activity-' + id);
     if (!row) return;
     const text = row.querySelector('.act-text').value;
-    const cat  = ocr.categorizeActivity(text);
+    // Also try to match a preset category automatically
+    const presets = storage.getPresets();
+    const match   = presets.find(p => p.name.toLowerCase() === text.trim().toLowerCase());
+    const cat     = match ? match.category : ocr.categorizeActivity(text);
     row.querySelector('.act-category').value = cat;
     updateCategoryColor(id, cat);
 }
@@ -155,7 +252,7 @@ async function saveEntry() {
     const date = document.getElementById('entry-date').value;
     if (!date) { showToast('Please select a date', 'error'); return; }
 
-    const rows = document.querySelectorAll('.activity-row');
+    const rows       = document.querySelectorAll('.activity-row');
     const activities = [];
     rows.forEach(row => {
         const text = row.querySelector('.act-text').value.trim();
@@ -163,7 +260,7 @@ async function saveEntry() {
         activities.push({
             time:     row.querySelector('.act-time').value,
             activity: text,
-            duration: row.querySelector('.act-duration').value,
+            duration: row.querySelector('.act-duration').value.trim(),
             category: row.querySelector('.act-category').value
         });
     });
@@ -174,7 +271,7 @@ async function saveEntry() {
     const entry = { date, activities, review: document.getElementById('daily-review').value };
     const saved = await storage.saveEntry(date, entry);
     if (saved) {
-        showToast('Entry saved to Supabase ✅', 'success');
+        showToast('Activities saved ✅', 'success');
         resetForm();
     } else {
         showToast('Save failed — check console', 'error');
@@ -182,25 +279,70 @@ async function saveEntry() {
 }
 
 function resetForm() {
+    // Clear the form but keep today's date selected and one blank row
     document.getElementById('activities-container').innerHTML = '';
     document.getElementById('daily-review').value = '';
     activityCount = 0;
     addActivityField();
+    // Reset date to today
+    document.getElementById('entry-date').value = new Date().toISOString().slice(0, 10);
 }
 
-// ─── Load existing entry ──────────────────────────────────────────────────────
+// ─── Load existing entry for a date (for reference only — not loaded into form)
+// The form is always FRESH. Existing entries ACCUMULATE via saveEntry append logic.
+// We only load when user explicitly switches to a date that already has data —
+// shown as a subtle info banner so they know data exists.
 async function loadEntryForDate() {
     const date = document.getElementById('entry-date').value;
     if (!date) return;
+
+    // Clear the form — start fresh for the selected date
+    document.getElementById('activities-container').innerHTML = '';
+    document.getElementById('daily-review').value = '';
+    activityCount = 0;
+    addActivityField(); // one blank row ready
+
     const entry = await storage.getEntry(date);
-    if (entry) {
-        document.getElementById('activities-container').innerHTML = '';
-        activityCount = 0;
-        entry.activities.forEach(a => addActivityField(a));
-        addActivityField(); // blank row for adding more
-        document.getElementById('daily-review').value = entry.review || '';
-        showToast('Entry loaded for ' + date, 'info');
+    if (entry && entry.activities && entry.activities.length > 0) {
+        const totalMins = entry.activities.reduce((s, a) => s + parseDurationToMins(a.duration), 0);
+        const summary   = minsToDisplay(totalMins);
+        showToast(`${entry.activities.length} activities already saved for ${date} (${summary} total). New activities will be added to them.`, 'info');
+        // Show the existing activities count as a header above the form
+        let banner = document.getElementById('existing-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'existing-banner';
+            banner.className = 'existing-banner';
+            document.getElementById('activities-container').before(banner);
+        }
+        banner.innerHTML = `
+            <span>📋 ${entry.activities.length} activities already logged for this date (${summary} total). New rows below will be <strong>added</strong> to them.</span>
+            <button onclick="loadExistingIntoForm('${date}')">✏️ View & Edit All</button>
+        `;
+        banner.style.display = 'flex';
+    } else {
+        const banner = document.getElementById('existing-banner');
+        if (banner) banner.style.display = 'none';
     }
+}
+
+// Optional: let user load existing entries into form for editing
+async function loadExistingIntoForm(date) {
+    const entry = await storage.getEntry(date);
+    if (!entry || !entry.activities) return;
+    document.getElementById('activities-container').innerHTML = '';
+    activityCount = 0;
+    entry.activities.forEach(a => addActivityField(a));
+    addActivityField(); // blank row for new
+    document.getElementById('daily-review').value = entry.review || '';
+    showToast('Loaded all activities for editing. Saving will replace the full list for this date.', 'info');
+
+    // When editing the full list, we need to REPLACE not append.
+    // Flag this mode so saveEntry knows to replace.
+    window._editingFullList = date;
+
+    const banner = document.getElementById('existing-banner');
+    if (banner) banner.innerHTML = `<span>✏️ Editing full list for ${date}. Saving will <strong>replace</strong> the entire day's activities.</span>`;
 }
 
 // ─── Daily Summary ────────────────────────────────────────────────────────────
@@ -216,20 +358,35 @@ async function renderDailySummary() {
         return;
     }
 
-    const cats  = { spiritual: 0, skills: 0, health: 0, general: 0 };
-    entry.activities.forEach(a => cats[a.category] = (cats[a.category] || 0) + 1);
+    // Duration totals by category
+    const catMins  = { spiritual: 0, skills: 0, health: 0, general: 0 };
+    const catCount = { spiritual: 0, skills: 0, health: 0, general: 0 };
+    let   totalMins = 0;
+
+    entry.activities.forEach(a => {
+        const m = parseDurationToMins(a.duration);
+        catMins[a.category]  = (catMins[a.category]  || 0) + m;
+        catCount[a.category] = (catCount[a.category] || 0) + 1;
+        totalMins += m;
+    });
+
     const total = entry.activities.length;
-    const score = Math.round(((cats.spiritual + cats.skills + cats.health) / total) * 100);
+    const score = Math.round(((catCount.spiritual + catCount.skills + catCount.health) / total) * 100);
 
     container.innerHTML = `
         <div class="summary-score">
             <div class="score-circle" style="--score:${score}">${score}<span>%</span></div>
             <p>Today's Performance Score</p>
         </div>
-        <div class="category-bars">
-            ${renderCategoryBar('Spiritual', cats.spiritual, total, 'spiritual')}
-            ${renderCategoryBar('Skills',    cats.skills,    total, 'skills')}
-            ${renderCategoryBar('Health',    cats.health,    total, 'health')}
+        <div class="duration-totals">
+            ${renderDurationTotal('🟠 Spiritual', catMins.spiritual, totalMins, 'spiritual')}
+            ${renderDurationTotal('🟢 Skills',    catMins.skills,    totalMins, 'skills')}
+            ${renderDurationTotal('🔵 Health',    catMins.health,    totalMins, 'health')}
+            ${catMins.general > 0 ? renderDurationTotal('⚪ General', catMins.general, totalMins, 'general') : ''}
+            <div class="duration-total-row total-row">
+                <span class="dur-label">Total Time</span>
+                <span class="dur-value">${minsToDisplay(totalMins)}</span>
+            </div>
         </div>
         <div class="activities-list">
             <h3>Today's Activities</h3>
@@ -243,6 +400,18 @@ async function renderDailySummary() {
             `).join('')}
         </div>
         ${entry.review ? `<div class="review-box"><strong>Reflection:</strong> ${entry.review}</div>` : ''}
+    `;
+}
+
+function renderDurationTotal(label, mins, totalMins, cat) {
+    const pct = totalMins > 0 ? Math.round((mins / totalMins) * 100) : 0;
+    return `
+        <div class="duration-total-row">
+            <span class="dur-label cat-${cat}">${label}</span>
+            <div class="dur-bar-track"><div class="dur-bar-fill cat-fill-${cat}" style="width:${pct}%"></div></div>
+            <span class="dur-value">${minsToDisplay(mins)}</span>
+            <span class="dur-pct">${pct}%</span>
+        </div>
     `;
 }
 
@@ -269,54 +438,67 @@ async function renderWeeklyView() {
         days.push(d.toISOString().slice(0, 10));
     }
 
-    const dayNames  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    let totalCats   = { spiritual: 0, skills: 0, health: 0, general: 0 };
-    let gridHtml    = '<div class="week-grid">';
+    const dayNames   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const totalMins  = { spiritual: 0, skills: 0, health: 0, general: 0 };
+    const totalCount = { spiritual: 0, skills: 0, health: 0, general: 0 };
+    let   grandMins  = 0;
+    let gridHtml     = '<div class="week-grid">';
 
     days.forEach(day => {
         const entry   = entries[day];
         const d       = new Date(day + 'T00:00:00');
         const isToday = day === new Date().toISOString().slice(0, 10);
         const hasEntry= entry && entry.activities && entry.activities.length > 0;
-        let cats      = { spiritual: 0, skills: 0, health: 0 };
+        const dayMins = { spiritual: 0, skills: 0, health: 0 };
 
         if (hasEntry) {
             entry.activities.forEach(a => {
-                if (cats[a.category]      !== undefined) cats[a.category]++;
-                if (totalCats[a.category] !== undefined) totalCats[a.category]++;
+                const m = parseDurationToMins(a.duration);
+                if (dayMins[a.category]   !== undefined) dayMins[a.category]   += m;
+                if (totalMins[a.category] !== undefined) totalMins[a.category] += m;
+                if (totalCount[a.category]!== undefined) totalCount[a.category]++;
+                grandMins += m;
             });
         }
 
+        const dayTotalMins = dayMins.spiritual + dayMins.skills + dayMins.health;
         gridHtml += `
             <div class="week-day ${isToday ? 'today' : ''} ${hasEntry ? 'has-entry' : 'no-entry'}">
                 <div class="day-label">${dayNames[d.getDay()]}</div>
                 <div class="day-date">${d.getDate()}</div>
                 <div class="day-dots">
-                    ${cats.spiritual > 0 ? `<span class="dot dot-spiritual" title="Spiritual: ${cats.spiritual}"></span>` : ''}
-                    ${cats.skills    > 0 ? `<span class="dot dot-skills"    title="Skills: ${cats.skills}"></span>`       : ''}
-                    ${cats.health    > 0 ? `<span class="dot dot-health"    title="Health: ${cats.health}"></span>`       : ''}
+                    ${dayMins.spiritual > 0 ? `<span class="dot dot-spiritual" title="Spiritual: ${minsToDisplay(dayMins.spiritual)}"></span>` : ''}
+                    ${dayMins.skills    > 0 ? `<span class="dot dot-skills"    title="Skills: ${minsToDisplay(dayMins.skills)}"></span>`       : ''}
+                    ${dayMins.health    > 0 ? `<span class="dot dot-health"    title="Health: ${minsToDisplay(dayMins.health)}"></span>`       : ''}
                 </div>
-                <div class="day-count">${hasEntry ? entry.activities.length + ' act.' : '—'}</div>
+                <div class="day-count">${hasEntry ? minsToDisplay(dayTotalMins) : '—'}</div>
             </div>
         `;
     });
     gridHtml += '</div>';
 
-    const totalActs   = Object.values(totalCats).reduce((s, v) => s + v, 0);
-    const weekScore   = totalActs > 0 ? Math.round(((totalCats.spiritual + totalCats.skills + totalCats.health) / totalActs) * 100) : 0;
-    const daysLogged  = days.filter(d => entries[d] && entries[d].activities && entries[d].activities.length > 0).length;
+    const totalActs  = Object.values(totalCount).reduce((s, v) => s + v, 0);
+    const weekScore  = totalActs > 0 ? Math.round(((totalCount.spiritual + totalCount.skills + totalCount.health) / totalActs) * 100) : 0;
+    const daysLogged = days.filter(d => entries[d] && entries[d].activities && entries[d].activities.length > 0).length;
 
     container.innerHTML = `
         <div class="week-stats">
             <div class="stat-card"><div class="stat-num">${daysLogged}/7</div><div class="stat-label">Days Logged</div></div>
             <div class="stat-card"><div class="stat-num">${totalActs}</div><div class="stat-label">Total Activities</div></div>
+            <div class="stat-card"><div class="stat-num">${minsToDisplay(grandMins)}</div><div class="stat-label">Total Hours</div></div>
             <div class="stat-card"><div class="stat-num">${weekScore}%</div><div class="stat-label">Week Score</div></div>
         </div>
         ${gridHtml}
-        <div class="category-bars" style="margin-top:1.5rem">
-            ${renderCategoryBar('Spiritual', totalCats.spiritual, totalActs, 'spiritual')}
-            ${renderCategoryBar('Skills',    totalCats.skills,    totalActs, 'skills')}
-            ${renderCategoryBar('Health',    totalCats.health,    totalActs, 'health')}
+        <h3 style="margin:1.5rem 0 0.75rem; font-size:1rem; color:var(--text-muted);">Time by Category This Week</h3>
+        <div class="duration-totals">
+            ${renderDurationTotal('🟠 Spiritual', totalMins.spiritual, grandMins, 'spiritual')}
+            ${renderDurationTotal('🟢 Skills',    totalMins.skills,    grandMins, 'skills')}
+            ${renderDurationTotal('🔵 Health',    totalMins.health,    grandMins, 'health')}
+            ${totalMins.general > 0 ? renderDurationTotal('⚪ General', totalMins.general, grandMins, 'general') : ''}
+            <div class="duration-total-row total-row">
+                <span class="dur-label">Total Time</span>
+                <span class="dur-value">${minsToDisplay(grandMins)}</span>
+            </div>
         </div>
     `;
 }
@@ -326,25 +508,30 @@ async function renderMonthlyReview() {
     const container = document.getElementById('monthly-content');
     container.innerHTML = '<div class="empty-state"><span>⏳</span><p>Loading from Supabase…</p></div>';
 
-    const entries     = await storage.getMonthEntries();
-    const today       = new Date();
-    const daysSoFar   = today.getDate();
-    let totalCats     = { spiritual: 0, skills: 0, health: 0, general: 0 };
-    let daysLogged    = 0;
+    const entries    = await storage.getMonthEntries();
+    const today      = new Date();
+    const daysSoFar  = today.getDate();
+    const totalMins  = { spiritual: 0, skills: 0, health: 0, general: 0 };
+    const totalCount = { spiritual: 0, skills: 0, health: 0, general: 0 };
+    let   grandMins  = 0;
+    let   daysLogged = 0;
 
     Object.values(entries).forEach(entry => {
         if (entry.activities && entry.activities.length > 0) {
             daysLogged++;
             entry.activities.forEach(a => {
-                if (totalCats[a.category] !== undefined) totalCats[a.category]++;
+                const m = parseDurationToMins(a.duration);
+                if (totalMins[a.category]  !== undefined) totalMins[a.category]  += m;
+                if (totalCount[a.category] !== undefined) totalCount[a.category]++;
+                grandMins += m;
             });
         }
     });
 
     const consistency = Math.round((daysLogged / daysSoFar) * 100);
-    const totalActs   = Object.values(totalCats).reduce((s, v) => s + v, 0);
-    const monthScore  = totalActs > 0 ? Math.round(((totalCats.spiritual + totalCats.skills + totalCats.health) / totalActs) * 100) : 0;
-    const insights    = generateInsights(totalCats, daysLogged, daysSoFar, consistency);
+    const totalActs   = Object.values(totalCount).reduce((s, v) => s + v, 0);
+    const monthScore  = totalActs > 0 ? Math.round(((totalCount.spiritual + totalCount.skills + totalCount.health) / totalActs) * 100) : 0;
+    const insights    = generateInsights(totalCount, daysLogged, daysSoFar, consistency);
 
     container.innerHTML = `
         <div class="month-header">
@@ -353,16 +540,22 @@ async function renderMonthlyReview() {
         <div class="week-stats">
             <div class="stat-card"><div class="stat-num">${consistency}%</div><div class="stat-label">Consistency</div></div>
             <div class="stat-card"><div class="stat-num">${daysLogged}/${daysSoFar}</div><div class="stat-label">Days Logged</div></div>
+            <div class="stat-card"><div class="stat-num">${minsToDisplay(grandMins)}</div><div class="stat-label">Total Hours</div></div>
             <div class="stat-card"><div class="stat-num">${monthScore}%</div><div class="stat-label">Month Score</div></div>
-            <div class="stat-card"><div class="stat-num">${totalActs}</div><div class="stat-label">Total Activities</div></div>
         </div>
-        <div class="category-bars" style="margin-top:1.5rem">
-            ${renderCategoryBar('Spiritual', totalCats.spiritual, totalActs, 'spiritual')}
-            ${renderCategoryBar('Skills',    totalCats.skills,    totalActs, 'skills')}
-            ${renderCategoryBar('Health',    totalCats.health,    totalActs, 'health')}
+        <h3 style="margin:1.5rem 0 0.75rem; font-size:1rem; color:var(--text-muted);">Time by Category This Month</h3>
+        <div class="duration-totals">
+            ${renderDurationTotal('🟠 Spiritual', totalMins.spiritual, grandMins, 'spiritual')}
+            ${renderDurationTotal('🟢 Skills',    totalMins.skills,    grandMins, 'skills')}
+            ${renderDurationTotal('🔵 Health',    totalMins.health,    grandMins, 'health')}
+            ${totalMins.general > 0 ? renderDurationTotal('⚪ General', totalMins.general, grandMins, 'general') : ''}
+            <div class="duration-total-row total-row">
+                <span class="dur-label">Total Time</span>
+                <span class="dur-value">${minsToDisplay(grandMins)}</span>
+            </div>
         </div>
         <div class="insights-box">
-            <h3>💡 AI Insights</h3>
+            <h3>💡 Insights</h3>
             ${insights.map(i => `<div class="insight-item">${i}</div>`).join('')}
         </div>
     `;
@@ -417,7 +610,6 @@ function handlePhotoUpload(event) {
 }
 
 async function processOcrFile(file) {
-    // Show preview immediately
     const preview = document.getElementById('photo-preview');
     const reader  = new FileReader();
     reader.onload  = e => { preview.src = e.target.result; preview.style.display = 'block'; };
@@ -427,16 +619,13 @@ async function processOcrFile(file) {
     document.getElementById('ocr-progress').style.display = 'block';
     document.getElementById('import-btn').style.display   = 'none';
 
-    // Status callback — updates the progress label in real time
     const onStatus = (msg) => {
         const el = document.getElementById('ocr-status');
         if (el) el.textContent = msg;
-        // Gemini is fast — animate the bar to show activity
         const bar = document.getElementById('ocr-progress-bar');
         if (bar) bar.style.width = '70%';
     };
 
-    // Tesseract progress callback (fallback only)
     const onProgress = (p) => {
         const bar = document.getElementById('ocr-progress-bar');
         const el  = document.getElementById('ocr-status');
@@ -509,7 +698,6 @@ async function exportAsPDF() {
         const entries = await storage.getAllEntries();
         const dates   = Object.keys(entries).sort().reverse();
 
-        // ── Title page ──
         doc.setFillColor(13, 27, 75);
         doc.rect(0, 0, 210, 297, 'F');
         doc.setTextColor(245, 200, 66);
@@ -528,14 +716,12 @@ async function exportAsPDF() {
             general:   [130, 130, 130]
         };
 
-        // ── One page per entry ──
         for (const date of dates) {
             const entry = entries[date];
             if (!entry || !entry.activities || entry.activities.length === 0) continue;
             doc.addPage();
             let y = 20;
 
-            // Date header bar
             doc.setFillColor(13, 27, 75);
             doc.rect(0, 0, 210, 16, 'F');
             doc.setTextColor(245, 200, 66);
@@ -544,7 +730,6 @@ async function exportAsPDF() {
             doc.text(d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }), 10, 11);
             y = 26;
 
-            // Activities
             doc.setTextColor(30, 30, 30);
             doc.setFontSize(10); doc.setFont('helvetica', 'bold');
             doc.text('Activities', 10, y); y += 7;
@@ -560,7 +745,20 @@ async function exportAsPDF() {
                 doc.text(line, 16, y); y += 8;
             }
 
-            // Reflection box
+            // Duration totals
+            const catM = { spiritual: 0, skills: 0, health: 0, general: 0 };
+            entry.activities.forEach(a => {
+                if (catM[a.category] !== undefined) catM[a.category] += parseDurationToMins(a.duration);
+            });
+            const grandM = Object.values(catM).reduce((s, v) => s + v, 0);
+            if (grandM > 0) {
+                y += 4;
+                if (y > 272) { doc.addPage(); y = 20; }
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(60, 60, 80);
+                doc.text(`Total: ${minsToDisplay(grandM)}  |  Spiritual: ${minsToDisplay(catM.spiritual)}  |  Skills: ${minsToDisplay(catM.skills)}  |  Health: ${minsToDisplay(catM.health)}`, 10, y);
+                y += 8;
+            }
+
             if (entry.review) {
                 y += 4;
                 if (y > 262) { doc.addPage(); y = 20; }
@@ -666,20 +864,23 @@ function showToast(message, type = 'info') {
     const toast    = document.getElementById('toast');
     toast.textContent = message;
     toast.className   = 'toast toast-' + type + ' show';
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     storage.init();
 
+    // Set today's date, but do NOT load existing entry (form starts fresh)
     const dateInput = document.getElementById('entry-date');
     dateInput.value = new Date().toISOString().slice(0, 10);
+
+    // When user changes date, show info about existing data but keep form fresh
     dateInput.addEventListener('change', loadEntryForDate);
 
-    addActivityField();
+    addActivityField(); // one blank row ready
     setupDropzone();
     loadDailyScripture();
     generateStars();
-    showTab('daily');
+    showTab('write');   // Start on Write tab so form is ready
 });
