@@ -1552,4 +1552,51 @@ window.addEventListener('DOMContentLoaded', () => {
     addExpenseRow();
     // Show write tab by default
     showTab('write');
+
+    // Header rotating quotes
+    initHeaderQuotes();
 });
+
+// ─── Header Rotating Quotes ───────────────────────────────────────────────────
+function initHeaderQuotes() {
+    const techQuotes = [
+        { text: "Technology is best when it brings people together.", author: "Matt Mullenweg" },
+        { text: "The science of today is the technology of tomorrow.", author: "Edward Teller" },
+        { text: "Innovation distinguishes a leader from a follower.", author: "Steve Jobs" },
+        { text: "Code is like prayer — it requires discipline and consistency.", author: "" },
+        { text: "The greatest danger is not that our aim is too high, but too low.", author: "Michelangelo" },
+        { text: "Your future is created by what you do today, not tomorrow.", author: "Robert Kiyosaki" },
+        { text: "Build systems that outlast your season.", author: "" },
+        { text: "Every expert was once a beginner. Keep building.", author: "" },
+        { text: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
+        { text: "Small consistent actions create extraordinary results.", author: "" },
+    ];
+
+    const scriptureQuotes = [
+        { text: "I can do all things through Christ who strengthens me.", ref: "Phil 4:13 NKJV" },
+        { text: "For I know the thoughts that I think toward you, says the Lord, thoughts of peace and not of evil, to give you a future and a hope.", ref: "Jer 29:11 NKJV" },
+        { text: "Trust in the Lord with all your heart, and lean not on your own understanding.", ref: "Prov 3:5 NKJV" },
+        { text: "Be strong and of good courage; do not be afraid, nor be dismayed, for the Lord your God is with you wherever you go.", ref: "Josh 1:9 NKJV" },
+        { text: "Commit your works to the Lord, and your thoughts will be established.", ref: "Prov 16:3 NKJV" },
+        { text: "The Lord is my strength and my shield; my heart trusted in Him, and I am helped.", ref: "Ps 28:7 NKJV" },
+        { text: "But seek first the kingdom of God and His righteousness, and all these things shall be added to you.", ref: "Matt 6:33 NKJV" },
+        { text: "The name of the Lord is a strong tower; the righteous run to it and are safe.", ref: "Prov 18:10 NKJV" },
+        { text: "With God all things are possible.", ref: "Matt 19:26 NKJV" },
+        { text: "But those who wait on the Lord shall renew their strength; they shall mount up with wings like eagles.", ref: "Isa 40:31 NKJV" },
+    ];
+
+    // Pick one per day (day-of-year index so it changes daily but is stable)
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+    const tq = techQuotes[dayOfYear % techQuotes.length];
+    const sq = scriptureQuotes[dayOfYear % scriptureQuotes.length];
+
+    const techEl = document.getElementById('header-tech-quote');
+    const scrEl  = document.getElementById('header-scripture-quote');
+
+    if (techEl) {
+        techEl.innerHTML = `<span class="hq-text">"${tq.text}"</span>${tq.author ? `<span class="hq-author">— ${tq.author}</span>` : ''}`;
+    }
+    if (scrEl) {
+        scrEl.innerHTML = `<span class="hq-text">"${sq.text}"</span><span class="hq-author">— ${sq.ref}</span>`;
+    }
+}

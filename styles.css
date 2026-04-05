@@ -50,6 +50,32 @@ header h1 {
     letter-spacing: -0.5px;
 }
 header h1 span { color: #F5A623; }
+/* Header rotating quotes */
+.header-quote {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    max-width: 260px;
+    padding: 0 1rem;
+}
+.tech-quote  { border-left: 2px solid rgba(245,166,35,0.5);  padding-left: 0.75rem; }
+.scripture-quote { border-left: 2px solid rgba(100,200,255,0.4); padding-left: 0.75rem; }
+.hq-text {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.82);
+    font-style: italic;
+    line-height: 1.35;
+    display: block;
+}
+.hq-author {
+    font-size: 0.62rem;
+    color: rgba(255,255,255,0.45);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    display: block;
+    margin-top: 0.1rem;
+}
+
 .header-actions { display: flex; gap: 0.5rem; }
 .btn-header {
     background: rgba(255,255,255,0.1);
@@ -925,6 +951,11 @@ textarea { resize: vertical; min-height: 80px; }
     .food-row { grid-template-columns: 100px 1fr; }
     .expense-row { grid-template-columns: 1fr 110px 36px; }
     .summary-title-row { flex-direction: column; align-items: flex-start; }
+    .header-quote { display: none; }
+}
+@media (max-width: 768px) {
+    .header-quote { max-width: 160px; }
+    .hq-text { font-size: 0.62rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
