@@ -1,7 +1,7 @@
 // storage.js - Supabase data management
 
-const SUPABASE_URL = 'https://fftvgsiknzcylizhwarh.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmdHZnc2lrbnpjeWxpemh3YXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjUwOTgsImV4cCI6MjA5MDAwMTA5OH0.QiDoDgqLDT495J4ilUzak1E7MMv3IEl2H4FVSpMN2tQ';
+const SUPABASE_URL = 'https://vwnflckbvabkiaeadkqa.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3bmZsY2tidmFia2lhZWFka3FhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNDU2NjMsImV4cCI6MjA5MDkyMTY2M30.-OyWacv6jfQvsP6z--BD1_QC1pFtW0-ounPCD4dSYTE';
 
 const storage = {
     client: null,
