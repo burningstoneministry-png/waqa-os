@@ -735,3 +735,194 @@ textarea { resize: vertical; min-height: 80px; }
     .category-cards { grid-template-columns: repeat(2, 1fr); }
     .cat-card-pct { font-size: 1.3rem; }
 }
+
+/* ─── Card subtitle ──────────────────────────────────────────────────────── */
+.card-subtitle {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-left: 0.5rem;
+    background: var(--bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: 20px;
+}
+
+/* ─── Section label ──────────────────────────────────────────────────────── */
+.section-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+/* ─── Food Form ──────────────────────────────────────────────────────────── */
+.food-form { display: flex; flex-direction: column; gap: 0.65rem; }
+.food-row { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 0.75rem; }
+.food-row label { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
+.food-row input { padding: 0.55rem 0.85rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.88rem; font-family: var(--font); outline: none; transition: border-color 0.2s; }
+.food-row input:focus { border-color: var(--color-health); box-shadow: 0 0 0 3px rgba(55,138,221,0.1); }
+
+/* ─── Food Summary ───────────────────────────────────────────────────────── */
+.food-summary-grid { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+.food-summary-item { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.5rem 0.75rem; background: var(--color-health-light); border-radius: 8px; font-size: 0.88rem; }
+.food-meal-label { font-weight: 600; color: var(--color-health); min-width: 90px; font-size: 0.82rem; }
+
+/* ─── Currency input ─────────────────────────────────────────────────────── */
+.currency-input-wrap { position: relative; display: flex; align-items: center; }
+.currency-input-wrap .currency-symbol { position: absolute; left: 0.75rem; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; pointer-events: none; }
+.currency-input-wrap input { padding-left: 1.75rem; width: 100%; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-family: var(--font); outline: none; padding-top: 0.6rem; padding-bottom: 0.6rem; padding-right: 0.9rem; transition: border-color 0.2s; }
+.currency-input-wrap input:focus { border-color: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,0.1); }
+.currency-input-wrap.small input { padding-top: 0.45rem; padding-bottom: 0.45rem; font-size: 0.85rem; }
+
+/* ─── Expense Rows ───────────────────────────────────────────────────────── */
+.expense-row { display: grid; grid-template-columns: 1fr 140px 36px; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.expense-row .exp-desc { padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: 0.88rem; font-family: var(--font); outline: none; }
+.expense-row .exp-desc:focus { border-color: #059669; }
+.btn-add-expense { background: #ecfdf5; color: #059669; border: 1.5px dashed #059669; }
+.btn-add-expense:hover { background: #d1fae5; }
+
+/* ─── Expense Summary ────────────────────────────────────────────────────── */
+.expense-summary-list { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }
+.expense-summary-row { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0.75rem; background: var(--bg); border-radius: 8px; font-size: 0.88rem; }
+.expense-summary-row.total-row { background: #ecfdf5; border: 1px solid #a7f3d0; margin-top: 0.25rem; }
+.expense-amount { font-weight: 600; color: #059669; }
+
+/* ─── Finance Summary Box (weekly/monthly) ───────────────────────────────── */
+.finance-summary-box { background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.fin-sum-row { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid #d1fae5; font-size: 0.88rem; }
+.fin-sum-row:last-child { border-bottom: none; }
+.fin-sum-val { font-weight: 700; color: #059669; }
+
+/* ─── Finance inline mini cards (in heading) ─────────────────────────────── */
+.summary-title-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+.finance-inline-cards { display: flex; gap: 0.5rem; }
+.finance-mini-card { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.82rem; }
+.expense-card { background: #fef9c3; border: 1px solid #fde68a; }
+.balance-card  { background: #ecfdf5; border: 1px solid #a7f3d0; }
+.fmc-icon { font-size: 1rem; }
+.fmc-label { font-size: 0.68rem; color: var(--text-muted); line-height: 1; }
+.fmc-value { font-weight: 700; font-size: 0.85rem; color: var(--text); line-height: 1.2; }
+
+/* ─── AI Coach FAB ───────────────────────────────────────────────────────── */
+#ai-coach-fab {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1A1A2E, #0F3460);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    z-index: 1000;
+    transition: transform 0.2s, box-shadow 0.2s;
+    user-select: none;
+}
+#ai-coach-fab:hover  { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.3); }
+#ai-coach-fab.active { background: linear-gradient(135deg, #0F3460, #1e40af); }
+
+/* ─── AI Coach Panel ─────────────────────────────────────────────────────── */
+#ai-coach-panel {
+    position: fixed;
+    bottom: 5rem;
+    right: 1.5rem;
+    width: 340px;
+    max-height: 520px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    z-index: 999;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#ai-coach-panel.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+
+#ai-coach-header {
+    background: linear-gradient(135deg, #1A1A2E, #0F3460);
+    color: white;
+    padding: 0.9rem 1.1rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+#ai-coach-close { background: none; border: none; color: white; font-size: 1.1rem; cursor: pointer; opacity: 0.7; padding: 0; }
+#ai-coach-close:hover { opacity: 1; }
+
+#ai-coach-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    background: #f8fafc;
+}
+
+.chat-msg {
+    max-width: 88%;
+    padding: 0.6rem 0.9rem;
+    border-radius: 14px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+.chat-user { background: #0F3460; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+.chat-ai   { background: white; color: var(--text); align-self: flex-start; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-typing { opacity: 0.5; font-style: italic; }
+
+#ai-coach-input-row {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-top: 1px solid var(--border);
+    background: white;
+}
+#ai-coach-input {
+    flex: 1;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.88rem;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color 0.2s;
+}
+#ai-coach-input:focus { border-color: #0F3460; }
+#ai-coach-send {
+    background: #0F3460;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+#ai-coach-send:hover { background: #16213E; }
+
+@media (max-width: 480px) {
+    #ai-coach-panel { width: calc(100vw - 2rem); right: 1rem; bottom: 4.5rem; }
+    #ai-coach-fab   { bottom: 1rem; right: 1rem; }
+    .food-row { grid-template-columns: 100px 1fr; }
+    .expense-row { grid-template-columns: 1fr 110px 36px; }
+    .summary-title-row { flex-direction: column; align-items: flex-start; }
+}

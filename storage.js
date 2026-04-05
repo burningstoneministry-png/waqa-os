@@ -17,6 +17,8 @@ const storage = {
         return {
             date:       row.date,
             activities: row.activities || [],
+            food:       row.food       || { breakfast: '', lunch: '', dinner: '', snacks: '', water: '' },
+            finances:   row.finances   || { expenses: [], bankBalance: '' },
             review:     row.review     || '',
             savedAt:    row.saved_at
         };
@@ -26,6 +28,8 @@ const storage = {
         return Object.values(obj).map(e => ({
             date:       e.date,
             activities: e.activities || [],
+            food:       e.food       || { breakfast: '', lunch: '', dinner: '', snacks: '', water: '' },
+            finances:   e.finances   || { expenses: [], bankBalance: '' },
             review:     e.review     || '',
             saved_at:   e.savedAt    || new Date().toISOString()
         }));
@@ -35,24 +39,31 @@ const storage = {
 
     /**
      * saveEntry: APPENDS new activities to any existing ones for this date.
-     * It never overwrites — existing activities for the date are kept,
-     * and the new activities are added to the end of the array.
+     * Food and finances REPLACE (latest entry wins — these are not accumulated).
      * The review text is replaced with the latest value.
      */
     async saveEntry(date, entry) {
-        // 1. Fetch any existing entry for this date
         const existing = await this.getEntry(date);
         const existingActivities = (existing && existing.activities) ? existing.activities : [];
 
-        // 2. Merge: keep existing, append new ones
+        // Activities accumulate; food + finances + review replace
         const mergedActivities = [...existingActivities, ...(entry.activities || [])];
 
-        // 3. Upsert the merged array
+        // Only replace food/finances if new values were actually provided
+        const food     = (entry.food     && Object.values(entry.food).some(v => v !== '' && v !== undefined))
+                            ? entry.food
+                            : (existing ? existing.food : { breakfast: '', lunch: '', dinner: '', snacks: '', water: '' });
+        const finances = (entry.finances && (entry.finances.bankBalance !== '' || (entry.finances.expenses && entry.finances.expenses.length > 0)))
+                            ? entry.finances
+                            : (existing ? existing.finances : { expenses: [], bankBalance: '' });
+
         const { data, error } = await this.client
             .from('diary_entries')
             .upsert({
                 date,
                 activities: mergedActivities,
+                food,
+                finances,
                 review:     entry.review || (existing ? existing.review : '') || '',
                 saved_at:   new Date().toISOString()
             }, { onConflict: 'date' })
@@ -142,10 +153,25 @@ const storage = {
         }
     },
 
-    // ── Activity Presets ─────────────────────────────────────────────────────
-    // Saved in localStorage for simplicity (no extra table needed).
-    // Format: { name: string, category: string }[]
+    // ── Chat history (localStorage) ───────────────────────────────────────────
+    getChatHistory() {
+        try {
+            const raw = localStorage.getItem('ai_coach_history');
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) { return []; }
+    },
 
+    saveChatHistory(messages) {
+        // Keep last 50 messages only
+        const trimmed = messages.slice(-50);
+        localStorage.setItem('ai_coach_history', JSON.stringify(trimmed));
+    },
+
+    clearChatHistory() {
+        localStorage.removeItem('ai_coach_history');
+    },
+
+    // ── Activity Presets ─────────────────────────────────────────────────────
     getPresets() {
         try {
             const raw = localStorage.getItem('activity_presets');
@@ -163,9 +189,8 @@ const storage = {
         const presets = this.getPresets();
         const trimmed = name.trim();
         if (!trimmed) return false;
-        // Avoid exact duplicate names
         if (presets.find(p => p.name.toLowerCase() === trimmed.toLowerCase())) return false;
-        presets.push({ name: trimmed, category: category || 'general' });
+        presets.push({ name: trimmed, category: category || 'skills' });
         this.savePresets(presets);
         return true;
     },
@@ -177,18 +202,18 @@ const storage = {
 
     _defaultPresets() {
         return [
-            { name: 'Prayer',           category: 'spiritual' },
-            { name: 'Bible Study',      category: 'spiritual' },
-            { name: 'Devotion',         category: 'spiritual' },
-            { name: 'Fasting',          category: 'spiritual' },
-            { name: 'Worship',          category: 'spiritual' },
-            { name: 'Sermon Prep',      category: 'spiritual' },
-            { name: 'Exercise',         category: 'health'    },
-            { name: 'Walking',          category: 'health'    },
-            { name: 'Reading',          category: 'skills'    },
-            { name: 'Study',            category: 'skills'    },
-            { name: 'Coding',           category: 'skills'    },
-            { name: 'Meeting',          category: 'general'   }
+            { name: 'Prayer',        category: 'spiritual' },
+            { name: 'Bible Study',   category: 'spiritual' },
+            { name: 'Devotion',      category: 'spiritual' },
+            { name: 'Fasting',       category: 'spiritual' },
+            { name: 'Worship',       category: 'spiritual' },
+            { name: 'Sermon Prep',   category: 'spiritual' },
+            { name: 'Exercise',      category: 'health'    },
+            { name: 'Base Training', category: 'health'    },
+            { name: 'Walking',       category: 'health'    },
+            { name: 'Reading',       category: 'skills'    },
+            { name: 'Study',         category: 'skills'    },
+            { name: 'Coding',        category: 'skills'    },
         ];
     }
 };
