@@ -192,6 +192,11 @@ textarea { resize: vertical; min-height: 80px; }
 .activity-row.cat-spiritual { border-left-color: var(--color-spiritual); background: var(--color-spiritual-light); }
 .activity-row.cat-skills { border-left-color: var(--color-skills); background: var(--color-skills-light); }
 .activity-row.cat-health { border-left-color: var(--color-health); background: var(--color-health-light); }
+/* General / unfilled activity row — subtle dashed style */
+.activity-row.cat-general {
+    border-left: 4px dashed #d1d5db;
+    background: #f9fafb;
+}
 .activity-row input, .activity-row select {
     background: white;
     padding: 0.45rem 0.6rem;

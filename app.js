@@ -104,7 +104,7 @@ function addActivityField(prefill = {}) {
     div.innerHTML = `
         <input type="time" class="act-time" value="${prefill.time || ''}" placeholder="Time">
         <input type="text" class="act-text" value="${prefill.activity || ''}" placeholder="Activity description..." oninput="autoCategorize(${id})">
-        <input type="text" class="act-duration" value="${prefill.duration || ''}" placeholder="Duration (e.g. 30 min)">
+        <input type="text" class="act-duration" value="${prefill.duration || ''}" placeholder="Duration (e.g. 1hr)">
         <select class="act-category" onchange="updateCategoryColor(${id}, this.value)">
             <option value="general"  ${prefill.category === 'general'  ? 'selected' : ''}>General</option>
             <option value="spiritual"${prefill.category === 'spiritual' ? 'selected' : ''}>🟠 Spiritual</option>
@@ -118,6 +118,19 @@ function addActivityField(prefill = {}) {
 }
 
 function removeActivity(id) {
+    const rows = document.querySelectorAll('.activity-row');
+    if (rows.length <= 1) {
+        // Don't remove the last row — just clear it instead
+        const el = document.getElementById('activity-' + id);
+        if (el) {
+            el.querySelector('.act-time').value = '';
+            el.querySelector('.act-text').value = '';
+            el.querySelector('.act-duration').value = '';
+            el.querySelector('.act-category').value = 'general';
+            updateCategoryColor(id, 'general');
+        }
+        return;
+    }
     const el = document.getElementById('activity-' + id);
     if (el) el.remove();
 }
@@ -184,6 +197,7 @@ async function loadEntryForDate() {
         document.getElementById('activities-container').innerHTML = '';
         activityCount = 0;
         entry.activities.forEach(a => addActivityField(a));
+        addActivityField(); // blank row for adding more
         document.getElementById('daily-review').value = entry.review || '';
         showToast('Entry loaded for ' + date, 'info');
     }
