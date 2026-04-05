@@ -926,3 +926,382 @@ textarea { resize: vertical; min-height: 80px; }
     .expense-row { grid-template-columns: 1fr 110px 36px; }
     .summary-title-row { flex-direction: column; align-items: flex-start; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   YEARLY REVIEW — Filter Pills
+═══════════════════════════════════════════════════════════════════ */
+.month-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 1rem 0 0.75rem;
+}
+.month-pill {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8rem;
+    font-family: var(--font);
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.18s;
+}
+.month-pill:hover  { border-color: #0F3460; color: #0F3460; }
+.month-pill.active { background: #0F3460; border-color: #0F3460; color: white; }
+
+.activity-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.25rem;
+}
+.filter-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-right: 0.25rem;
+}
+.act-pill {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 0.28rem 0.7rem;
+    font-size: 0.78rem;
+    font-family: var(--font);
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.18s;
+}
+.act-pill:hover  { border-color: #E8601C; color: #E8601C; }
+.act-pill.active { background: #E8601C; border-color: #E8601C; color: white; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   YEARLY REVIEW — Sections & Big Stats
+═══════════════════════════════════════════════════════════════════ */
+.yearly-section {
+    margin-bottom: 1.75rem;
+}
+.yearly-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1.5px solid var(--border);
+}
+
+/* Row of big hero stats */
+.yearly-stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.yearly-big-stat {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem 0.85rem;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.yearly-big-stat:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.09); }
+.ybs-number {
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #0F3460;
+    margin-bottom: 0.3rem;
+}
+.ybs-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    line-height: 1.3;
+}
+.ybs-badge {
+    display: inline-block;
+    margin-top: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    border-radius: 20px;
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.ybs-badge.over  { background: #fce4ec; color: #c62828; }
+.ybs-badge.exact { background: #e3f2fd; color: #1565c0; }
+
+/* Small secondary mini-stats (sub-row below hero) */
+.yearly-mini-stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+.yearly-mini-stat {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.5rem 0.9rem;
+    min-width: 110px;
+    flex: 1;
+}
+.yms-num   { font-size: 1.1rem; font-weight: 700; color: #0F3460; }
+.yms-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
+.yearly-mini-stat.income  { border-left: 3px solid #2e7d32; }
+.yearly-mini-stat.expense { border-left: 3px solid #c62828; }
+.yearly-mini-stat.net-pos { border-left: 3px solid #0F3460; }
+.yearly-mini-stat.net-neg { border-left: 3px solid #E8601C; }
+.yearly-mini-stat.income  .yms-num { color: #2e7d32; }
+.yearly-mini-stat.expense .yms-num { color: #c62828; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   YEARLY REVIEW — Book List
+═══════════════════════════════════════════════════════════════════ */
+.book-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+.book-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
+    transition: box-shadow 0.15s;
+}
+.book-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.book-icon  { font-size: 1.4rem; line-height: 1; flex-shrink: 0; margin-top: 0.1rem; }
+.book-info  { flex: 1; min-width: 0; }
+.book-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.book-meta  { font-size: 0.78rem; color: var(--text-muted); }
+
+/* Book fields inside activity form */
+.book-fields {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.65rem 0.75rem;
+    background: #f8f9ff;
+    border: 1.5px dashed #b3c6ff;
+    border-radius: 10px;
+}
+.book-fields.visible { display: flex; }
+.book-fields input[type="text"],
+.book-fields input[type="number"] {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.85rem;
+    font-family: var(--font);
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+.book-fields input:focus { border-color: #0F3460; }
+.audio-check-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.83rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+.audio-check-label input[type="checkbox"] { accent-color: #0F3460; width: 15px; height: 15px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   YEARLY REVIEW — Food Frequency Grid
+═══════════════════════════════════════════════════════════════════ */
+.food-freq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.55rem;
+    margin-top: 0.5rem;
+}
+.food-freq-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    padding: 0.5rem 0.8rem;
+    gap: 0.5rem;
+}
+.food-freq-name  { font-size: 0.82rem; color: var(--text); font-weight: 500; flex: 1; }
+.food-freq-count {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: white;
+    background: #E8601C;
+    border-radius: 12px;
+    padding: 0.1rem 0.55rem;
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   YEARLY REVIEW — Monthly Finance Table
+═══════════════════════════════════════════════════════════════════ */
+.monthly-finance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.75rem;
+    font-size: 0.83rem;
+}
+.monthly-finance-table th,
+.monthly-finance-table td {
+    padding: 0.5rem 0.7rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+.monthly-finance-table th {
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    background: var(--bg);
+}
+.monthly-finance-table tr:last-child td { border-bottom: none; }
+.monthly-finance-table tr:hover td { background: #f9f9ff; }
+.mft-row td:first-child { font-weight: 600; color: var(--text); }
+.fin-income  { color: #2e7d32; font-weight: 600; }
+.fin-expense { color: #c62828; font-weight: 600; }
+.fin-net-pos { color: #1565c0; font-weight: 700; }
+.fin-net-neg { color: #E8601C; font-weight: 700; }
+.mft-total-row td { font-weight: 700; background: var(--bg) !important; border-top: 2px solid var(--border); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   YEARLY REVIEW — Month Heatmap
+═══════════════════════════════════════════════════════════════════ */
+.month-heatmap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+}
+.heatmap-month {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.heatmap-month-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    width: 28px;
+    flex-shrink: 0;
+    text-align: right;
+}
+.heatmap-days {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+}
+.heatmap-cell {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    cursor: default;
+    transition: transform 0.1s;
+}
+.heatmap-cell:hover { transform: scale(1.3); }
+.heat-0 { background: #eee; }
+.heat-1 { background: #c8e6c9; }
+.heat-2 { background: #81c784; }
+.heat-3 { background: #4caf50; }
+.heat-4 { background: #2e7d32; }
+.heat-5 { background: #1b5e20; }
+
+/* Heatmap entry-count label */
+.heatmap-count {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-left: 0.3rem;
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   YEARLY REVIEW — Monthly Bar Chart (Prayer/hours)
+═══════════════════════════════════════════════════════════════════ */
+.monthly-bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.35rem;
+    height: 100px;
+    margin-top: 0.75rem;
+    padding-bottom: 1.5rem;
+    position: relative;
+}
+.mbc-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+    gap: 0.25rem;
+}
+.mbc-bar-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 80px;
+}
+.mbc-bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    min-height: 2px;
+    transition: height 0.4s ease;
+}
+.mbc-label {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-align: center;
+    position: absolute;
+    bottom: 0;
+    white-space: nowrap;
+}
+
+/* Add income button variant */
+.btn-add-income {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1.5px dashed #a5d6a7;
+}
+.btn-add-income:hover { background: #c8e6c9; border-color: #66bb6a; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   YEARLY REVIEW — Responsive
+═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+    .yearly-stats-row { grid-template-columns: repeat(2, 1fr); }
+    .food-freq-grid   { grid-template-columns: repeat(2, 1fr); }
+    .heatmap-cell     { width: 11px; height: 11px; }
+    .monthly-bar-chart { height: 80px; }
+    .mbc-bar-wrap { height: 60px; }
+    .month-filter-row  { gap: 0.3rem; }
+    .activity-filter-row { gap: 0.3rem; }
+    .monthly-finance-table { font-size: 0.75rem; }
+    .monthly-finance-table th,
+    .monthly-finance-table td { padding: 0.4rem 0.4rem; }
+}

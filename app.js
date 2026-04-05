@@ -2,9 +2,13 @@
 
 let activityCount  = 0;
 let expenseCount   = 0;
+let incomeCount    = 0;
 let currentTab     = 'write';
-let extractedOcrData = null;
-let aiCoachOpen    = false;
+let extractedOcrData  = null;
+let aiCoachOpen       = false;
+let yearlyAllEntries  = {};   // cache for yearly data
+let yearlyActiveMonth = 'all';
+let yearlyActiveFilter = 'all';
 
 // ─── Baselines ────────────────────────────────────────────────────────────────
 const BASELINES = {
@@ -99,6 +103,7 @@ function showTab(tab) {
     if (tab === 'daily')   renderDailySummary();
     if (tab === 'weekly')  renderWeeklyView();
     if (tab === 'monthly') renderMonthlyReview();
+    if (tab === 'yearly')  initYearlyReview();
 }
 
 // ─── Preset Dropdown ──────────────────────────────────────────────────────────
@@ -140,10 +145,11 @@ function addActivityField(prefill = {}) {
     const div = document.createElement('div');
     div.className = 'activity-row';
     div.id = 'activity-' + id;
+    const isReading = (prefill.activity || '').toLowerCase().includes('read') || (prefill.activity || '').toLowerCase().includes('book');
     div.innerHTML = `
         <input type="time" class="act-time" value="${prefill.time || ''}" placeholder="Time">
         <div class="act-text-wrap">
-            <input type="text" class="act-text" value="${prefill.activity || ''}" placeholder="Activity..." oninput="autoCategorize(${id})">
+            <input type="text" class="act-text" value="${prefill.activity || ''}" placeholder="Activity..." oninput="autoCategorize(${id}); checkBookFields(${id})">
             <button class="preset-toggle-btn" onclick="togglePresetDropdown(this)" title="Pick saved activity">▾</button>
             <div class="preset-dropdown">
                 <div class="preset-list">${buildPresetOptions()}</div>
@@ -160,6 +166,13 @@ function addActivityField(prefill = {}) {
             <option value="health"   ${prefill.category === 'health'    ? ' selected' : ''}>🔵 Health</option>
         </select>
         <button class="btn-remove" onclick="removeActivity(${id})">✕</button>
+        <div class="book-fields" id="book-fields-${id}" style="display:${isReading ? 'flex' : 'none'}">
+            <input type="text"   class="act-book-title"  value="${prefill.bookTitle  || ''}" placeholder="📚 Book title (e.g. Atomic Habits)">
+            <input type="number" class="act-book-pages"  value="${prefill.pagesRead  || ''}" placeholder="Pages read" min="0">
+            <label class="audio-check-label">
+                <input type="checkbox" class="act-audio" ${prefill.isAudio ? 'checked' : ''}> 🎧 Audio
+            </label>
+        </div>
     `;
     container.appendChild(div);
     updateCategoryColor(id, prefill.category || 'spiritual');
@@ -207,6 +220,16 @@ function autoCategorize(id) {
     const cat     = match ? match.category : ocr.categorizeActivity(text);
     row.querySelector('.act-category').value = cat;
     updateCategoryColor(id, cat);
+}
+
+function checkBookFields(id) {
+    const row   = document.getElementById('activity-' + id);
+    if (!row) return;
+    const text  = row.querySelector('.act-text').value.toLowerCase();
+    const panel = document.getElementById('book-fields-' + id);
+    if (!panel) return;
+    const isReading = text.includes('read') || text.includes('book');
+    panel.style.display = isReading ? 'flex' : 'none';
 }
 
 function updateCategoryColor(id, category) {
@@ -271,6 +294,47 @@ function collectFood() {
     };
 }
 
+// ─── Income Rows ──────────────────────────────────────────────────────────────
+function addIncomeRow(prefill = {}) {
+    incomeCount++;
+    const id        = incomeCount;
+    const container = document.getElementById('income-container');
+    const div       = document.createElement('div');
+    div.className   = 'expense-row';
+    div.id          = 'income-' + id;
+    div.innerHTML = `
+        <input type="text"   class="exp-desc"   value="${prefill.description || ''}" placeholder="Source (e.g. Church Offering)">
+        <div class="currency-input-wrap small">
+            <span class="currency-symbol">$</span>
+            <input type="number" class="exp-amount" value="${prefill.amount || ''}" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <button class="btn-remove" onclick="removeIncomeRow(${id})">✕</button>
+    `;
+    container.appendChild(div);
+}
+
+function removeIncomeRow(id) {
+    const rows = document.querySelectorAll('#income-container .expense-row');
+    if (rows.length <= 1) {
+        const el = document.getElementById('income-' + id);
+        if (el) { el.querySelector('.exp-desc').value = ''; el.querySelector('.exp-amount').value = ''; }
+        return;
+    }
+    const el = document.getElementById('income-' + id);
+    if (el) el.remove();
+}
+
+function collectIncome() {
+    const rows   = document.querySelectorAll('#income-container .expense-row');
+    const income = [];
+    rows.forEach(row => {
+        const desc   = row.querySelector('.exp-desc').value.trim();
+        const amount = parseFloat(row.querySelector('.exp-amount').value);
+        if (desc && !isNaN(amount) && amount > 0) income.push({ description: desc, amount });
+    });
+    return income;
+}
+
 // ─── Save Entry ───────────────────────────────────────────────────────────────
 async function saveEntry() {
     const date = document.getElementById('entry-date').value;
@@ -281,18 +345,27 @@ async function saveEntry() {
     rows.forEach(row => {
         const text = row.querySelector('.act-text').value.trim();
         if (!text) return;
-        activities.push({
+        const actId      = row.id.replace('activity-', '');
+        const bookFields = document.getElementById('book-fields-' + actId);
+        const act = {
             time:     row.querySelector('.act-time').value,
             activity: text,
             duration: row.querySelector('.act-duration').value.trim(),
             category: row.querySelector('.act-category').value
-        });
+        };
+        if (bookFields && bookFields.style.display !== 'none') {
+            act.bookTitle  = bookFields.querySelector('.act-book-title').value.trim();
+            act.pagesRead  = parseInt(bookFields.querySelector('.act-book-pages').value) || 0;
+            act.isAudio    = bookFields.querySelector('.act-audio').checked;
+        }
+        activities.push(act);
     });
 
     const food     = collectFood();
     const expenses = collectExpenses();
+    const income   = collectIncome();
     const balance  = document.getElementById('finance-balance').value;
-    const finances = { expenses, bankBalance: balance ? parseFloat(balance) : '' };
+    const finances = { expenses, income, bankBalance: balance ? parseFloat(balance) : '' };
     const review   = document.getElementById('daily-review').value;
 
     showToast('Saving…', 'info');
@@ -308,6 +381,7 @@ async function saveEntry() {
 function resetForm() {
     document.getElementById('activities-container').innerHTML = '';
     document.getElementById('expenses-container').innerHTML  = '';
+    document.getElementById('income-container').innerHTML    = '';
     document.getElementById('daily-review').value     = '';
     document.getElementById('food-breakfast').value   = '';
     document.getElementById('food-lunch').value       = '';
@@ -317,8 +391,10 @@ function resetForm() {
     document.getElementById('finance-balance').value  = '';
     activityCount = 0;
     expenseCount  = 0;
+    incomeCount   = 0;
     addActivityField();
     addExpenseRow();
+    addIncomeRow();
     document.getElementById('entry-date').value = new Date().toISOString().slice(0, 10);
     window._editingFullList = null;
 }
@@ -376,9 +452,13 @@ async function loadExistingIntoForm(date) {
     if (entry.finances) {
         document.getElementById('finance-balance').value = entry.finances.bankBalance || '';
         document.getElementById('expenses-container').innerHTML = '';
+        document.getElementById('income-container').innerHTML   = '';
         expenseCount = 0;
+        incomeCount  = 0;
         (entry.finances.expenses || []).forEach(e => addExpenseRow(e));
         if (!entry.finances.expenses || entry.finances.expenses.length === 0) addExpenseRow();
+        (entry.finances.income || []).forEach(i => addIncomeRow(i));
+        if (!entry.finances.income || entry.finances.income.length === 0) addIncomeRow();
     }
 
     window._editingFullList = date;
@@ -790,6 +870,390 @@ async function renderMonthlyReview() {
         aiEl.className   = 'ai-commentary-text';
         aiEl.textContent = commentary || `${milestone ? '🎉 Incredible — 60 hours of prayer this month achieved!' : `🙏 Prayer at ${prayerPct}% of the 60hr monthly goal.`} Diary logged ${monthAgg.diaryDays} of ${daysSoFar} days (target: 20/month = ${diaryPct}%). ${monthSpent > 0 ? `Spent $${monthSpent.toFixed(2)} this month.` : ''} Keep building — your discipline today is shaping your destiny!`;
     }
+}
+
+// ─── Yearly Review ───────────────────────────────────────────────────────────
+
+async function initYearlyReview() {
+    // Populate year selector from available years
+    const years   = await storage.getAvailableYears();
+    const sel     = document.getElementById('year-selector');
+    const curYear = new Date().getFullYear();
+    sel.innerHTML = '';
+    years.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y; opt.textContent = y;
+        if (y === curYear) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    yearlyActiveMonth  = 'all';
+    yearlyActiveFilter = 'all';
+    renderYearlyReview();
+}
+
+async function renderYearlyReview() {
+    const container = document.getElementById('yearly-content');
+    const finCards  = document.getElementById('yearly-finance-cards');
+    container.innerHTML = '<div class="empty-state"><span>⏳</span><p>Loading yearly data…</p></div>';
+    if (finCards) finCards.innerHTML = '';
+
+    const year    = parseInt(document.getElementById('year-selector').value) || new Date().getFullYear();
+    const entries = await storage.getYearEntries(year);
+    yearlyAllEntries = entries;
+
+    renderYearlyContent(entries, year);
+}
+
+function filterYearlyMonth(month, btn) {
+    yearlyActiveMonth = month;
+    document.querySelectorAll('.month-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    renderYearlyContent(yearlyAllEntries, parseInt(document.getElementById('year-selector').value) || new Date().getFullYear());
+}
+
+function filterYearlyActivity(filter, btn) {
+    yearlyActiveFilter = filter;
+    document.querySelectorAll('.act-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    renderYearlyContent(yearlyAllEntries, parseInt(document.getElementById('year-selector').value) || new Date().getFullYear());
+}
+
+function renderYearlyContent(allEntries, year) {
+    const container = document.getElementById('yearly-content');
+    const finCards  = document.getElementById('yearly-finance-cards');
+
+    // Filter by month if needed
+    let entries = allEntries;
+    if (yearlyActiveMonth !== 'all') {
+        entries = {};
+        Object.keys(allEntries).forEach(date => {
+            if (new Date(date + 'T00:00:00').getMonth() === yearlyActiveMonth) {
+                entries[date] = allEntries[date];
+            }
+        });
+    }
+
+    // ── Aggregate everything ──────────────────────────────────────────────────
+    const agg = {
+        prayerMins: 0, bibleStudyMins: 0, exerciseMins: 0, fastingDays: 0,
+        codingSessions: 0, baseTrainingSessions: 0,
+        catMins: { spiritual: 0, skills: 0, health: 0 },
+        totalMins: 0, daysLogged: 0, waterMl: 0,
+        books: {},        // { title: { pages, audio, count } }
+        foodFreq: {},     // { foodName: count }
+        monthlyIncome:   new Array(12).fill(0),
+        monthlyExpenses: new Array(12).fill(0),
+        monthlyPrayer:   new Array(12).fill(0),
+        totalIncome: 0, totalExpenses: 0, latestBalance: '',
+    };
+
+    Object.keys(entries).forEach(date => {
+        const entry = entries[date];
+        if (!entry) return;
+        const monthIdx = new Date(date + 'T00:00:00').getMonth();
+        const hasActs  = entry.activities && entry.activities.length > 0;
+        if (hasActs) agg.daysLogged++;
+
+        // Activities
+        (entry.activities || []).forEach(a => {
+            const name = (a.activity || '').trim().toLowerCase();
+            const mins = parseDurationToMins(a.duration);
+            const cat  = a.category || 'spiritual';
+            if (agg.catMins[cat] !== undefined) agg.catMins[cat] += mins;
+            agg.totalMins += mins;
+
+            if (name.includes('prayer') || name.includes('pray')) {
+                agg.prayerMins += mins;
+                agg.monthlyPrayer[monthIdx] += mins;
+            }
+            if (name.includes('bible') || name.includes('devotion')) agg.bibleStudyMins += mins;
+            if (name.includes('exercise') || name.includes('training') || name.includes('walking') || name.includes('walk') || name.includes('gym') || name.includes('workout')) {
+                agg.exerciseMins += mins;
+                if (name.includes('base training')) agg.baseTrainingSessions++;
+            }
+            if (name.includes('coding') || name.includes('code')) agg.codingSessions++;
+            if (name.includes('fast') || name.includes('fasting')) agg.fastingDays++;
+
+            // Books
+            if ((name.includes('read') || name.includes('book')) && a.bookTitle) {
+                const title = a.bookTitle.trim();
+                if (title) {
+                    if (!agg.books[title]) agg.books[title] = { pages: 0, audio: false, sessions: 0 };
+                    agg.books[title].pages    += (a.pagesRead || 0);
+                    agg.books[title].audio     = agg.books[title].audio || !!a.isAudio;
+                    agg.books[title].sessions += 1;
+                }
+            }
+        });
+
+        // Food frequency
+        const food = entry.food || {};
+        ['breakfast','lunch','dinner','snacks'].forEach(meal => {
+            if (!food[meal]) return;
+            // Split by comma for multiple items
+            food[meal].split(',').forEach(item => {
+                const f = item.trim().toLowerCase();
+                if (f) agg.foodFreq[f] = (agg.foodFreq[f] || 0) + 1;
+            });
+        });
+
+        // Water
+        if (food.water) agg.waterMl += parseWaterMl(food.water);
+
+        // Finances
+        if (entry.finances) {
+            const exp = (entry.finances.expenses || []).reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
+            const inc = (entry.finances.income   || []).reduce((s,i) => s + (parseFloat(i.amount)||0), 0);
+            agg.monthlyExpenses[monthIdx] += exp;
+            agg.monthlyIncome[monthIdx]   += inc;
+            agg.totalExpenses += exp;
+            agg.totalIncome   += inc;
+            if (entry.finances.bankBalance !== '') agg.latestBalance = entry.finances.bankBalance;
+        }
+    });
+
+    const netPosition = agg.totalIncome - agg.totalExpenses;
+
+    // Finance mini cards
+    if (finCards) finCards.innerHTML = `
+        <div class="finance-mini-card expense-card"><span class="fmc-icon">💵</span><div><div class="fmc-label">Income</div><div class="fmc-value">${formatCurrency(agg.totalIncome)}</div></div></div>
+        <div class="finance-mini-card balance-card"><span class="fmc-icon">💸</span><div><div class="fmc-label">Spent</div><div class="fmc-value">${formatCurrency(agg.totalExpenses)}</div></div></div>
+    `;
+
+    const yearLabel = yearlyActiveMonth === 'all' ? year : `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][yearlyActiveMonth]} ${year}`;
+    const daysInPeriod = yearlyActiveMonth === 'all' ? 365 : 31;
+
+    // ── Build HTML based on active filter ────────────────────────────────────
+    let html = '';
+
+    // Category cards — always shown
+    html += renderCategoryCards(agg.catMins, agg.totalMins);
+
+    // ── PRAYER filter ─────────────────────────────────────────────────────────
+    if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'prayer') {
+        const prayerHrs = (agg.prayerMins / 60);
+        const yearTarget = 730; // 2hrs × 365
+        const pct = baselinePct(agg.prayerMins, BASELINES.prayer * daysInPeriod);
+        html += `<div class="yearly-section">
+            <div class="section-title">🙏 Prayer</div>
+            <div class="yearly-big-stat">
+                <span class="ybs-number">${prayerHrs.toFixed(1)}</span>
+                <span class="ybs-label">hours of prayer${yearlyActiveMonth === 'all' ? ` in ${year}` : ''}</span>
+                ${prayerHrs >= 730 ? '<span class="ybs-badge">🏆 730hr Annual Goal Hit!</span>' : ''}
+            </div>
+            ${renderBaselineRow('🙏', 'Prayer', `${prayerHrs.toFixed(1)}hrs`, pct, 'var(--color-spiritual)', `Yearly target: ${BASELINES.prayer/60 * daysInPeriod}hrs`)}
+            <div class="section-title" style="margin-top:1rem;">Month-by-Month Prayer Hours</div>
+            ${renderMonthlyBarChart(agg.monthlyPrayer, 'var(--color-spiritual)', 'hrs', 60)}
+        </div>`;
+    }
+
+    // ── BIBLE STUDY filter ────────────────────────────────────────────────────
+    if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'bibleStudy') {
+        const bibleHrs = (agg.bibleStudyMins / 60);
+        const pct = baselinePct(agg.bibleStudyMins, BASELINES.bibleStudy * daysInPeriod);
+        html += `<div class="yearly-section">
+            <div class="section-title">📖 Bible Study</div>
+            <div class="yearly-big-stat">
+                <span class="ybs-number">${bibleHrs.toFixed(1)}</span>
+                <span class="ybs-label">total hours of Bible study</span>
+            </div>
+            ${renderBaselineRow('📖', 'Bible Study', `${bibleHrs.toFixed(1)}hrs`, pct, 'var(--color-spiritual)', `Target: 30mins/day × ${daysInPeriod} days`)}
+        </div>`;
+    }
+
+    // ── BOOKS filter ──────────────────────────────────────────────────────────
+    if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'books') {
+        const bookList = Object.entries(agg.books).sort((a,b) => b[1].pages - a[1].pages);
+        html += `<div class="yearly-section">
+            <div class="section-title">📚 Books Read</div>
+            <div class="yearly-big-stat">
+                <span class="ybs-number">${bookList.length}</span>
+                <span class="ybs-label">book${bookList.length !== 1 ? 's' : ''} tracked</span>
+            </div>
+            ${bookList.length > 0 ? `
+            <div class="book-list">
+                ${bookList.map(([title, data]) => `
+                    <div class="book-item">
+                        <div class="book-icon">${data.audio ? '🎧' : '📖'}</div>
+                        <div class="book-info">
+                            <div class="book-title">${title}</div>
+                            <div class="book-meta">${data.audio ? 'Audiobook' : `${data.pages} pages`} · ${data.sessions} session${data.sessions !== 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>` : '<div class="empty-state-small">No books logged yet. Add a book title when logging Reading activities.</div>'}
+        </div>`;
+    }
+
+    // ── EXERCISE / TRAINING filter ────────────────────────────────────────────
+    if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'exercise') {
+        const exHrs = (agg.exerciseMins / 60);
+        const pct   = baselinePct(agg.exerciseMins, BASELINES.exercise * daysInPeriod);
+        html += `<div class="yearly-section">
+            <div class="section-title">💪 Exercise & Training</div>
+            <div class="yearly-big-stat">
+                <span class="ybs-number">${exHrs.toFixed(1)}</span>
+                <span class="ybs-label">total hours of training</span>
+            </div>
+            ${renderBaselineRow('💪', 'Exercise', `${exHrs.toFixed(1)}hrs`, pct, 'var(--color-health)', `Target: 30mins/day × ${daysInPeriod} days`)}
+        </div>`;
+    }
+
+    // ── FASTING filter ────────────────────────────────────────────────────────
+    if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'fasting') {
+        const yearlyFastTarget = yearlyActiveMonth === 'all' ? 36 : 3;
+        const pct = baselinePct(agg.fastingDays, yearlyFastTarget);
+        html += `<div class="yearly-section">
+            <div class="section-title">🕊️ Fasting</div>
+            <div class="yearly-big-stat">
+                <span class="ybs-number">${agg.fastingDays}</span>
+                <span class="ybs-label">fasting day${agg.fastingDays !== 1 ? 's' : ''} recorded</span>
+                ${agg.fastingDays >= 36 ? '<span class="ybs-badge">🏆 Annual fasting goal hit!</span>' : ''}
+            </div>
+            ${renderBaselineRow('🕊️', 'Fasting', `${agg.fastingDays} days`, pct, '#7c3aed', `Target: 3 days/month (${yearlyFastTarget} for period)`)}
+        </div>`;
+    }
+
+    // ── FOOD filter ───────────────────────────────────────────────────────────
+    if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'food') {
+        const foodSorted = Object.entries(agg.foodFreq).sort((a,b) => b[1] - a[1]).slice(0, 30);
+        html += `<div class="yearly-section">
+            <div class="section-title">🍽️ Food Patterns</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem;">How often each food appeared in your diary. Helps you spot eating patterns.</p>
+            ${foodSorted.length > 0 ? `
+            <div class="food-freq-grid">
+                ${foodSorted.map(([food, count]) => `
+                    <div class="food-freq-item">
+                        <span class="food-freq-name">${food}</span>
+                        <span class="food-freq-count">${count}×</span>
+                    </div>
+                `).join('')}
+            </div>` : '<div class="empty-state-small">No food logged yet. Use the Food & Water section when writing your diary.</div>'}
+        </div>`;
+    }
+
+    // ── WATER filter ──────────────────────────────────────────────────────────
+    if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'water') {
+        const totalLitres = (agg.waterMl / 1000);
+        const avgLitres   = agg.daysLogged > 0 ? (totalLitres / agg.daysLogged) : 0;
+        const pct         = baselinePct(agg.waterMl, BASELINES.water * daysInPeriod);
+        html += `<div class="yearly-section">
+            <div class="section-title">💧 Water Intake</div>
+            <div class="yearly-stats-row">
+                <div class="yearly-mini-stat"><div class="yms-num">${totalLitres.toFixed(1)}L</div><div class="yms-label">Total Water</div></div>
+                <div class="yearly-mini-stat"><div class="yms-num">${avgLitres.toFixed(1)}L</div><div class="yms-label">Daily Average</div></div>
+                <div class="yearly-mini-stat"><div class="yms-num">${agg.daysLogged}</div><div class="yms-label">Days Logged</div></div>
+            </div>
+            ${renderBaselineRow('💧', 'Water', `${totalLitres.toFixed(1)}L total`, pct, 'var(--color-health)', 'Baseline: 1.5L/day')}
+        </div>`;
+    }
+
+    // ── FINANCE filter ────────────────────────────────────────────────────────
+    if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'finance') {
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        html += `<div class="yearly-section">
+            <div class="section-title">💰 Financial Summary</div>
+            <div class="yearly-stats-row">
+                <div class="yearly-mini-stat income"><div class="yms-num">${formatCurrency(agg.totalIncome)}</div><div class="yms-label">Total Income</div></div>
+                <div class="yearly-mini-stat expense"><div class="yms-num">${formatCurrency(agg.totalExpenses)}</div><div class="yms-label">Total Spent</div></div>
+                <div class="yearly-mini-stat ${netPosition >= 0 ? 'income' : 'expense'}"><div class="yms-num">${formatCurrency(Math.abs(netPosition))}</div><div class="yms-label">${netPosition >= 0 ? 'Net Surplus' : 'Net Deficit'}</div></div>
+            </div>
+            ${agg.latestBalance !== '' ? `<div class="fin-sum-row" style="margin-top:0.5rem;"><span>Latest Bank Balance</span><span class="fin-sum-val">${formatCurrency(agg.latestBalance)}</span></div>` : ''}
+            <div class="section-title" style="margin-top:1rem;">Month-by-Month Income vs Expenses</div>
+            <div class="monthly-finance-table">
+                <div class="mft-header"><span>Month</span><span>Income</span><span>Expenses</span><span>Net</span></div>
+                ${months.map((m, i) => {
+                    const inc = agg.monthlyIncome[i];
+                    const exp = agg.monthlyExpenses[i];
+                    const net = inc - exp;
+                    if (inc === 0 && exp === 0) return '';
+                    return `<div class="mft-row">
+                        <span>${m}</span>
+                        <span class="fin-income">${inc > 0 ? formatCurrency(inc) : '—'}</span>
+                        <span class="fin-expense">${exp > 0 ? formatCurrency(exp) : '—'}</span>
+                        <span class="${net >= 0 ? 'fin-income' : 'fin-expense'}">${(inc > 0 || exp > 0) ? formatCurrency(net) : '—'}</span>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>`;
+    }
+
+    // ── Month-by-month heatmap (always shown on 'all' filter) ─────────────────
+    if (yearlyActiveFilter === 'all') {
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const monthlyDays = new Array(12).fill(0);
+        Object.keys(allEntries).forEach(date => {
+            const entry = allEntries[date];
+            if (entry && entry.activities && entry.activities.length > 0) {
+                const m = new Date(date + 'T00:00:00').getMonth();
+                monthlyDays[m]++;
+            }
+        });
+        const maxDays = Math.max(...monthlyDays, 1);
+        html += `<div class="yearly-section">
+            <div class="section-title">📅 Activity Heatmap by Month</div>
+            <div class="month-heatmap">
+                ${months.map((m, i) => {
+                    const intensity = Math.round((monthlyDays[i] / maxDays) * 5);
+                    const prayerHrs = (agg.monthlyPrayer[i] / 60).toFixed(1);
+                    return `<div class="heatmap-cell heat-${intensity}" title="${m}: ${monthlyDays[i]} days logged, ${prayerHrs}hrs prayer">
+                        <div class="heatmap-month">${m}</div>
+                        <div class="heatmap-days">${monthlyDays[i]}d</div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>`;
+    }
+
+    // ── AI Yearly Coach ───────────────────────────────────────────────────────
+    html += `<div class="ai-commentary-box">
+        <div class="ai-commentary-header">🤖 AI Yearly Coach</div>
+        <div id="yearly-ai-text" class="ai-commentary-loading">Generating yearly review…</div>
+    </div>`;
+
+    container.innerHTML = html;
+
+    // Load AI commentary
+    const prayerHrs = (agg.prayerMins / 60).toFixed(1);
+    const bibleHrs  = (agg.bibleStudyMins / 60).toFixed(1);
+    const exHrs     = (agg.exerciseMins / 60).toFixed(1);
+    const bookCount = Object.keys(agg.books).length;
+    const aiPrompt  = `Yearly diary review for Pastor Fire — ${yearLabel}:
+Prayer: ${prayerHrs}hrs (annual target 730hrs, ${baselinePct(agg.prayerMins, BASELINES.prayer * 365)}%)
+Bible Study: ${bibleHrs}hrs
+Exercise: ${exHrs}hrs
+Fasting: ${agg.fastingDays} days (target 36/year)
+Books read: ${bookCount} book(s) — ${Object.keys(agg.books).join(', ') || 'none logged'}
+Water: ${(agg.waterMl/1000).toFixed(1)}L total
+Diary logged: ${agg.daysLogged} days
+Total Income: $${agg.totalIncome.toFixed(2)}, Total Spent: $${agg.totalExpenses.toFixed(2)}, Net: $${(agg.totalIncome - agg.totalExpenses).toFixed(2)}
+
+Write a 5-6 sentence powerful yearly review. Celebrate prayer milestones. Comment on reading habits vs high-performing leaders. Speak to financial discipline. End with a bold vision statement for the coming year. Tone: pastoral, inspiring, honest.`;
+
+    const commentary = await getAICommentary(aiPrompt);
+    const aiEl = document.getElementById('yearly-ai-text');
+    if (aiEl) {
+        aiEl.className   = 'ai-commentary-text';
+        aiEl.textContent = commentary || `🙏 ${prayerHrs} hours of prayer in ${yearLabel} — every hour invested in God's presence is eternal. 📚 ${bookCount} book(s) read — leaders who read lead better. 💰 Income: $${agg.totalIncome.toFixed(2)}, Spent: $${agg.totalExpenses.toFixed(2)}. Let ${year + 1} be the year you exceed every baseline and step fully into your calling!`;
+    }
+}
+
+// Monthly bar chart helper for yearly view
+function renderMonthlyBarChart(monthlyMins, color, unit, divisor) {
+    const months  = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+    const values  = monthlyMins.map(m => divisor ? (m / divisor) : m);
+    const maxVal  = Math.max(...values, 1);
+    return `<div class="monthly-bar-chart">
+        ${values.map((v, i) => {
+            const pct = Math.round((v / maxVal) * 100);
+            return `<div class="mbc-col">
+                <div class="mbc-bar-wrap">
+                    <div class="mbc-bar" style="height:${pct}%;background:${color};" title="${months[i]}: ${v.toFixed(1)}${unit}"></div>
+                </div>
+                <div class="mbc-label">${months[i]}</div>
+            </div>`;
+        }).join('')}
+    </div>`;
 }
 
 // ─── AI Coach Chatbot ─────────────────────────────────────────────────────────

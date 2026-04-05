@@ -18,7 +18,7 @@ const storage = {
             date:       row.date,
             activities: row.activities || [],
             food:       row.food       || { breakfast: '', lunch: '', dinner: '', snacks: '', water: '' },
-            finances:   row.finances   || { expenses: [], bankBalance: '' },
+            finances:   row.finances   || { expenses: [], income: [], bankBalance: '' },
             review:     row.review     || '',
             savedAt:    row.saved_at
         };
@@ -29,7 +29,7 @@ const storage = {
             date:       e.date,
             activities: e.activities || [],
             food:       e.food       || { breakfast: '', lunch: '', dinner: '', snacks: '', water: '' },
-            finances:   e.finances   || { expenses: [], bankBalance: '' },
+            finances:   e.finances   || { expenses: [], income: [], bankBalance: '' },
             review:     e.review     || '',
             saved_at:   e.savedAt    || new Date().toISOString()
         }));
@@ -123,6 +123,23 @@ const storage = {
             start.toISOString().slice(0, 10),
             today.toISOString().slice(0, 10)
         );
+    },
+
+    async getYearEntries(year) {
+        const y     = year || new Date().getFullYear();
+        const start = `${y}-01-01`;
+        const end   = `${y}-12-31`;
+        return this.getEntriesInRange(start, end);
+    },
+
+    async getAvailableYears() {
+        const { data, error } = await this.client
+            .from('diary_entries')
+            .select('date')
+            .order('date', { ascending: true });
+        if (error || !data) return [new Date().getFullYear()];
+        const years = [...new Set(data.map(r => parseInt(r.date.slice(0, 4), 10)))];
+        return years.length > 0 ? years : [new Date().getFullYear()];
     },
 
     async deleteEntry(date) {
