@@ -57,9 +57,17 @@ const storage = {
         const food     = (entry.food     && Object.values(entry.food).some(v => v !== '' && v !== undefined))
                             ? entry.food
                             : (existing ? existing.food : { breakfast: '', lunch: '', dinner: '', snacks: '', water: '' });
-        const finances = (entry.finances && (entry.finances.bankBalance !== '' || (entry.finances.expenses && entry.finances.expenses.length > 0)))
-                            ? entry.finances
-                            : (existing ? existing.finances : { expenses: [], bankBalance: '' });
+        // Build finances: merge expenses/income from new entry, but only overwrite
+        // bankBalance if the user explicitly typed one in (not blank).
+        const existingFinances = (existing && existing.finances) ? existing.finances : { expenses: [], income: [], bankBalance: '' };
+        const newFinances = entry.finances || {};
+        const finances = {
+            expenses:    (newFinances.expenses    && newFinances.expenses.length > 0)    ? newFinances.expenses    : existingFinances.expenses    || [],
+            income:      (newFinances.income      && newFinances.income.length > 0)      ? newFinances.income      : existingFinances.income      || [],
+            bankBalance: (newFinances.bankBalance !== '' && newFinances.bankBalance !== null && newFinances.bankBalance !== undefined)
+                            ? newFinances.bankBalance
+                            : existingFinances.bankBalance
+        };
 
         const health = entry.health || (existing ? existing.health : { status: 'healthy', sickDays: 0 });
         const sleep  = entry.sleep  || (existing ? existing.sleep  : { wakeTime: '', wakeReason: '', sleepTime: '', sleepReason: '' });
