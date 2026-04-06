@@ -1,5 +1,55 @@
 // app.js - Main application logic
 
+// ─── Login ────────────────────────────────────────────────────────────────────
+const LOGIN_USER = 'Waqa26';
+const LOGIN_PASS = 'K1mb02198';
+const SESSION_KEY = 'dt_session_v1';
+
+function checkSession() {
+    return sessionStorage.getItem(SESSION_KEY) === 'authenticated';
+}
+
+function attemptLogin(e) {
+    e.preventDefault();
+    const user = document.getElementById('login-username').value.trim();
+    const pass = document.getElementById('login-password').value;
+    const err  = document.getElementById('login-error');
+
+    if (user === LOGIN_USER && pass === LOGIN_PASS) {
+        sessionStorage.setItem(SESSION_KEY, 'authenticated');
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-root').style.display     = 'block';
+        err.style.display = 'none';
+        initApp();
+    } else {
+        err.style.display = 'block';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-password').focus();
+        // Shake animation
+        const card = document.querySelector('.login-card');
+        card.classList.remove('shake');
+        void card.offsetWidth; // reflow
+        card.classList.add('shake');
+    }
+}
+
+function togglePasswordVisibility() {
+    const pw  = document.getElementById('login-password');
+    const eye = document.querySelector('.login-eye');
+    if (pw.type === 'password') {
+        pw.type = 'text';
+        eye.textContent = '🙈';
+    } else {
+        pw.type = 'password';
+        eye.textContent = '👁';
+    }
+}
+
+function logout() {
+    sessionStorage.removeItem(SESSION_KEY);
+    location.reload();
+}
+
 let activityCount  = 0;
 let expenseCount   = 0;
 let incomeCount    = 0;
@@ -1956,7 +2006,7 @@ function showToast(msg, type = 'info') {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+function initApp() {
     storage.init();
     loadDailyScripture();
     setupDropzone();
@@ -1971,6 +2021,16 @@ window.addEventListener('DOMContentLoaded', () => {
     loadRunningBalance();
     // Header rotating quotes
     initHeaderQuotes();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    // If already authenticated this session, skip login screen
+    if (checkSession()) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-root').style.display     = 'block';
+        initApp();
+    }
+    // Otherwise login screen stays visible, initApp() called by attemptLogin()
 });
 
 // ─── Header Rotating Quotes ───────────────────────────────────────────────────
