@@ -30,7 +30,7 @@ module.exports = async function handler(req, res) {
         // ── AI Commentary mode (text-only, no image) ──────────────────────────
         if (type === 'commentary' && commentaryPrompt) {
             const geminiRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
                 {
                     method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -45,7 +45,11 @@ module.exports = async function handler(req, res) {
                     })
                 }
             );
-            if (!geminiRes.ok) return res.status(502).json({ commentary: null });
+            if (!geminiRes.ok) {
+                const errBody = await geminiRes.text();
+                console.error('Gemini commentary error:', errBody);
+                return res.status(502).json({ commentary: null, error: errBody });
+            }
             const data = await geminiRes.json();
             const commentary = data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
             return res.status(200).json({ commentary });
@@ -67,9 +71,9 @@ ${DIARY_FORMAT}
 Now read the diary image provided and return ONLY a raw JSON object following the structure
 and rules in the guide above. No markdown, no explanation — just the JSON.`;
 
-        // ── Call Gemini 1.5 Flash ─────────────────────────────────────────────
+        // ── Call Gemini 2.0 Flash ─────────────────────────────────────────────
         const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
             {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
