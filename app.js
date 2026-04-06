@@ -18,11 +18,11 @@ const BASELINES = {
     bookPages:         20,    // 20 pages/day
     water:             1500,  // 1.5L/day (ml)
     exercise:          30,    // 30mins/day
-    coding:            3,     // 3 sessions/week
+    coding:            300,   // 5hrs/week (mins)
     fasting:           3,     // 3 days/month
     baseTraining:      3,     // 3 sessions/week
-    keyboard:          3,     // 3 sessions/week
-    bass:              3,     // 3 sessions/week
+    keyboard:          1,     // 1 session/week (1hr)
+    bass:              1,     // 1 session/week (1hr)
     diaryWeek:         5,     // 5 logs/week
     diaryMonth:        20,    // 20 logs/month
 };
@@ -644,7 +644,7 @@ async function loadExistingIntoForm(date) {
 function aggregateActivities(activities) {
     const result = {
         prayerMins: 0, bibleStudyMins: 0, bookPages: 0, waterMl: 0,
-        exerciseMins: 0, codingSessions: 0, fastingDays: 0, baseTrainingSessions: 0,
+        exerciseMins: 0, codingMins: 0, codingSessions: 0, fastingDays: 0, baseTrainingSessions: 0,
         keyboardSessions: 0, bassSessions: 0,
         catMins: { spiritual: 0, skills: 0, health: 0 },
         totalMins: 0,
@@ -665,7 +665,7 @@ function aggregateActivities(activities) {
             if (name.includes('base training')) result.baseTrainingSessions += 1;
             result.exerciseMins += mins;
         }
-        else if (name.includes('coding') || name.includes('code'))        result.codingSessions += 1;
+        else if (name.includes('coding') || name.includes('code')) { result.codingSessions += 1; result.codingMins += mins; }
         else if (name.includes('fast') || name.includes('fasting'))       result.fastingDays += 1;
         // Music skills
         if (name.includes('keyboard') || name.includes('piano'))          result.keyboardSessions += 1;
@@ -964,7 +964,7 @@ async function renderWeeklyView() {
 
     const weekAgg = {
         prayerMins: 0, bibleStudyMins: 0, exerciseMins: 0, waterMl: 0,
-        codingSessions: 0, fastingDays: 0, baseTrainingSessions: 0,
+        codingMins: 0, codingSessions: 0, fastingDays: 0, baseTrainingSessions: 0,
         keyboardSessions: 0, bassSessions: 0,
         diaryDays: 0, catMins: { spiritual: 0, skills: 0, health: 0 }, totalMins: 0,
     };
@@ -985,6 +985,7 @@ async function renderWeeklyView() {
             weekAgg.prayerMins           += dayAgg.prayerMins;
             weekAgg.bibleStudyMins       += dayAgg.bibleStudyMins;
             weekAgg.exerciseMins         += dayAgg.exerciseMins;
+            weekAgg.codingMins           += dayAgg.codingMins;
             weekAgg.codingSessions       += dayAgg.codingSessions;
             weekAgg.fastingDays          += dayAgg.fastingDays;
             weekAgg.baseTrainingSessions += dayAgg.baseTrainingSessions;
@@ -1026,7 +1027,7 @@ async function renderWeeklyView() {
     const prayerPct   = baselinePct(weekAgg.prayerMins,     BASELINES.prayer * 7);
     const biblePct    = baselinePct(weekAgg.bibleStudyMins, BASELINES.bibleStudy * 7);
     const exercisePct = baselinePct(weekAgg.exerciseMins,   BASELINES.exercise * 7);
-    const codingPct   = baselinePct(weekAgg.codingSessions,       BASELINES.coding);
+    const codingPct   = baselinePct(weekAgg.codingMins,           BASELINES.coding);       // 300mins/week
     const trainPct    = baselinePct(weekAgg.baseTrainingSessions, BASELINES.baseTraining);
     const keyboardPct = baselinePct(weekAgg.keyboardSessions,     BASELINES.keyboard);
     const bassPct     = baselinePct(weekAgg.bassSessions,         BASELINES.bass);
@@ -1041,7 +1042,7 @@ async function renderWeeklyView() {
             ${renderBaselineRow('🙏', 'Prayer',        minsToDisplay(weekAgg.prayerMins),     prayerPct,   'var(--color-spiritual)', 'Baseline: 14hrs/week')}
             ${renderBaselineRow('📖', 'Bible Study',   minsToDisplay(weekAgg.bibleStudyMins), biblePct,    'var(--color-spiritual)', 'Baseline: 3.5hrs/week')}
             ${renderBaselineRow('💪', 'Exercise',      minsToDisplay(weekAgg.exerciseMins),   exercisePct, 'var(--color-health)',    'Baseline: 3.5hrs/week')}
-            ${renderBaselineRow('💻', 'Coding',          `${weekAgg.codingSessions} sessions`,       codingPct,   'var(--color-skills)',   'Baseline: 3 sessions/week')}
+            ${renderBaselineRow('💻', 'Coding',          minsToDisplay(weekAgg.codingMins),          codingPct,   'var(--color-skills)',   'Baseline: 5hrs/week')}
             ${renderBaselineRow('🏋️', 'Base Training',  `${weekAgg.baseTrainingSessions} sessions`,  trainPct,    'var(--color-health)',   'Baseline: 3 sessions/week')}
             ${renderBaselineRow('🎹', 'Keyboard',        `${weekAgg.keyboardSessions} sessions`,      keyboardPct, 'var(--color-skills)',   'Baseline: 3 sessions/week')}
             ${renderBaselineRow('🎸', 'Bass Guitar',     `${weekAgg.bassSessions} sessions`,          bassPct,     'var(--color-skills)',   'Baseline: 3 sessions/week')}
@@ -1059,7 +1060,7 @@ async function renderWeeklyView() {
         </div>
     `;
 
-    const aiPrompt = `${PASTOR_FIRE_VISION}\nWeekly diary summary for Pastor Fire:\nPrayer: ${minsToDisplay(weekAgg.prayerMins)} (${prayerPct}% of 14hr baseline)\nBible Study: ${minsToDisplay(weekAgg.bibleStudyMins)} (${biblePct}%)\nExercise: ${minsToDisplay(weekAgg.exerciseMins)} (${exercisePct}%)\nCoding: ${weekAgg.codingSessions} sessions (${codingPct}%)\nKeyboard: ${weekAgg.keyboardSessions} sessions (${keyboardPct}%)\nBass: ${weekAgg.bassSessions} sessions (${bassPct}%)\nBase Training: ${weekAgg.baseTrainingSessions} sessions (${trainPct}%)\nDiary logged: ${weekAgg.diaryDays}/7 days (${diaryPct}%)\nSpent: $${weekSpent.toFixed(2)}, Income: $${weekIncome.toFixed(2)}\n\nWrite a punchy 4-5 sentence weekly coaching challenge. Measure this week's execution against the life vision above. Score the week on spiritual depth, technical skill-building (coding/keyboard/bass), physical training, and financial discipline. Be honest — celebrate wins and name what was missing. End with a bold, specific challenge for next week tied to the flying car / kingdom vision.`;
+    const aiPrompt = `${PASTOR_FIRE_VISION}\nWeekly diary summary for Pastor Fire:\nPrayer: ${minsToDisplay(weekAgg.prayerMins)} (${prayerPct}% of 14hr baseline)\nBible Study: ${minsToDisplay(weekAgg.bibleStudyMins)} (${biblePct}%)\nExercise: ${minsToDisplay(weekAgg.exerciseMins)} (${exercisePct}%)\nCoding: ${minsToDisplay(weekAgg.codingMins)} (${codingPct}% of 5hr/week target)\nKeyboard: ${weekAgg.keyboardSessions} session(s) (${keyboardPct}% of 1/wk target)\nBass: ${weekAgg.bassSessions} session(s) (${bassPct}% of 1/wk target)\nBase Training: ${weekAgg.baseTrainingSessions} sessions (${trainPct}%)\nDiary logged: ${weekAgg.diaryDays}/7 days (${diaryPct}%)\nSpent: $${weekSpent.toFixed(2)}, Income: $${weekIncome.toFixed(2)}\n\nWrite a punchy 4-5 sentence weekly coaching challenge. Measure this week's execution against the life vision above. Score the week on spiritual depth, technical skill-building (coding/keyboard/bass), physical training, and financial discipline. Be honest — celebrate wins and name what was missing. End with a bold, specific challenge for next week tied to the flying car / kingdom vision.`;
 
     const commentary = await getAICommentary(aiPrompt);
     const aiEl = document.getElementById('weekly-ai-text');
@@ -1083,7 +1084,7 @@ async function renderMonthlyReview() {
 
     const monthAgg = {
         prayerMins: 0, bibleStudyMins: 0, exerciseMins: 0,
-        codingSessions: 0, fastingDays: 0, baseTrainingSessions: 0,
+        codingMins: 0, codingSessions: 0, fastingDays: 0, baseTrainingSessions: 0,
         keyboardSessions: 0, bassSessions: 0,
         diaryDays: 0, catMins: { spiritual: 0, skills: 0, health: 0 }, totalMins: 0,
     };
@@ -1097,6 +1098,7 @@ async function renderMonthlyReview() {
         monthAgg.prayerMins           += dayAgg.prayerMins;
         monthAgg.bibleStudyMins       += dayAgg.bibleStudyMins;
         monthAgg.exerciseMins         += dayAgg.exerciseMins;
+        monthAgg.codingMins           += dayAgg.codingMins;
         monthAgg.codingSessions       += dayAgg.codingSessions;
         monthAgg.fastingDays          += dayAgg.fastingDays;
         monthAgg.baseTrainingSessions += dayAgg.baseTrainingSessions;
@@ -1120,7 +1122,7 @@ async function renderMonthlyReview() {
     const fastingPct  = baselinePct(monthAgg.fastingDays,    BASELINES.fasting);
     const diaryPct    = baselinePct(monthAgg.diaryDays,      BASELINES.diaryMonth);
     const weeksElapsed = Math.max(1, Math.ceil(daysSoFar / 7));
-    const codingPct   = baselinePct(monthAgg.codingSessions,       BASELINES.coding       * weeksElapsed);
+    const codingPct    = baselinePct(monthAgg.codingMins,           BASELINES.coding       * weeksElapsed); // 300mins × weeks
     const keyboardPctM = baselinePct(monthAgg.keyboardSessions,    BASELINES.keyboard     * weeksElapsed);
     const bassPctM     = baselinePct(monthAgg.bassSessions,        BASELINES.bass         * weeksElapsed);
 
@@ -1134,7 +1136,7 @@ async function renderMonthlyReview() {
             ${renderBaselineRow('📖', 'Bible Study',   minsToDisplay(monthAgg.bibleStudyMins), biblePct,   'var(--color-spiritual)', `Baseline: 30mins × ${daysSoFar} days`)}
             ${renderBaselineRow('💪', 'Exercise',      minsToDisplay(monthAgg.exerciseMins),   exercisePct,'var(--color-health)',    `Baseline: 30mins × ${daysSoFar} days`)}
             ${renderBaselineRow('🕊️', 'Fasting',       `${monthAgg.fastingDays} day(s)`,            fastingPct,  '#7c3aed',             'Baseline: 3 days/month')}
-            ${renderBaselineRow('💻', 'Coding',        `${monthAgg.codingSessions} sessions`,       codingPct,   'var(--color-skills)', 'Baseline: 3 sessions/week')}
+            ${renderBaselineRow('💻', 'Coding',        minsToDisplay(monthAgg.codingMins),          codingPct,   'var(--color-skills)', 'Baseline: 5hrs/week')}
             ${renderBaselineRow('🎹', 'Keyboard',      `${monthAgg.keyboardSessions} sessions`,     keyboardPctM,'var(--color-skills)', 'Baseline: 3 sessions/week')}
             ${renderBaselineRow('🎸', 'Bass Guitar',   `${monthAgg.bassSessions} sessions`,         bassPctM,    'var(--color-skills)', 'Baseline: 3 sessions/week')}
             ${renderBaselineRow('📔', 'Diary Consistency', `${monthAgg.diaryDays}/${daysSoFar} days`, diaryPct,  '#059669',             'Baseline: 20 logs/month')}
@@ -1151,7 +1153,7 @@ async function renderMonthlyReview() {
         </div>
     `;
 
-    const aiPrompt = `${PASTOR_FIRE_VISION}\nMonthly diary summary for Pastor Fire — ${monthName}:\nPrayer: ${prayerHrs.toFixed(1)}hrs (${prayerPct}% of 60hr baseline)${milestone ? ' — MILESTONE ACHIEVED! 🏆' : ''}\nBible Study: ${minsToDisplay(monthAgg.bibleStudyMins)} (${biblePct}%)\nExercise: ${minsToDisplay(monthAgg.exerciseMins)} (${exercisePct}%)\nFasting: ${monthAgg.fastingDays} days (${fastingPct}% of 3-day baseline)\nCoding: ${monthAgg.codingSessions} sessions (${codingPct}%)\nKeyboard: ${monthAgg.keyboardSessions} sessions (${keyboardPctM}%)\nBass Guitar: ${monthAgg.bassSessions} sessions (${bassPctM}%)\nDiary consistency: ${monthAgg.diaryDays}/${daysSoFar} days (${diaryPct}%)\nTotal spent: $${monthSpent.toFixed(2)}, Income: $${monthIncome.toFixed(2)}\n\nWrite a powerful 5-6 sentence monthly review. Use the life vision above as the measuring stick — how well did this month advance the mission? Celebrate the prayer milestone if hit. Score technical skill-building (coding/keyboard/bass) — these are Phase 1 of the flying car vision. Be a coach who challenges, not just encourages. End with a declaration for next month.`;
+    const aiPrompt = `${PASTOR_FIRE_VISION}\nMonthly diary summary for Pastor Fire — ${monthName}:\nPrayer: ${prayerHrs.toFixed(1)}hrs (${prayerPct}% of 60hr baseline)${milestone ? ' — MILESTONE ACHIEVED! 🏆' : ''}\nBible Study: ${minsToDisplay(monthAgg.bibleStudyMins)} (${biblePct}%)\nExercise: ${minsToDisplay(monthAgg.exerciseMins)} (${exercisePct}%)\nFasting: ${monthAgg.fastingDays} days (${fastingPct}% of 3-day baseline)\nCoding: ${minsToDisplay(monthAgg.codingMins)} (${codingPct}% of 5hr/week target)\nKeyboard: ${monthAgg.keyboardSessions} session(s) (${keyboardPctM}% of 1/wk target)\nBass Guitar: ${monthAgg.bassSessions} session(s) (${bassPctM}% of 1/wk target)\nDiary consistency: ${monthAgg.diaryDays}/${daysSoFar} days (${diaryPct}%)\nTotal spent: $${monthSpent.toFixed(2)}, Income: $${monthIncome.toFixed(2)}\n\nWrite a powerful 5-6 sentence monthly review. Use the life vision above as the measuring stick — how well did this month advance the mission? Celebrate the prayer milestone if hit. Score technical skill-building (coding/keyboard/bass) — these are Phase 1 of the flying car vision. Be a coach who challenges, not just encourages. End with a declaration for next month.`;
 
     const commentary = await getAICommentary(aiPrompt);
     const aiEl = document.getElementById('monthly-ai-text');
@@ -1225,7 +1227,7 @@ async function renderYearlyContent(allEntries, year) {
     // ── Aggregate everything ──────────────────────────────────────────────────
     const agg = {
         prayerMins: 0, bibleStudyMins: 0, exerciseMins: 0, fastingDays: 0,
-        codingSessions: 0, baseTrainingSessions: 0, keyboardSessions: 0, bassSessions: 0,
+        codingMins: 0, codingSessions: 0, baseTrainingSessions: 0, keyboardSessions: 0, bassSessions: 0,
         catMins: { spiritual: 0, skills: 0, health: 0 },
         totalMins: 0, daysLogged: 0, waterMl: 0,
         books: {},        // { title: { pages, audio, count } }
@@ -1264,7 +1266,7 @@ async function renderYearlyContent(allEntries, year) {
                 agg.exerciseMins += mins;
                 if (name.includes('base training')) agg.baseTrainingSessions++;
             }
-            if (name.includes('coding') || name.includes('code'))  agg.codingSessions++;
+            if (name.includes('coding') || name.includes('code'))  { agg.codingSessions++; agg.codingMins += mins; }
             if (name.includes('fast') || name.includes('fasting')) agg.fastingDays++;
             if (name.includes('keyboard') || name.includes('piano')) agg.keyboardSessions++;
             if (name.includes('bass'))                               agg.bassSessions++;
@@ -1395,7 +1397,7 @@ async function renderYearlyContent(allEntries, year) {
         const exHrs  = (agg.exerciseMins / 60);
         const exPct  = baselinePct(agg.exerciseMins, BASELINES.exercise * daysInPeriod);
         const weeksInPeriod = yearlyActiveMonth === 'all' ? 52 : 4;
-        const codePct = baselinePct(agg.codingSessions,    BASELINES.coding    * weeksInPeriod);
+        const codePct = baselinePct(agg.codingMins,        BASELINES.coding    * weeksInPeriod); // 300mins × weeks
         const kbPct   = baselinePct(agg.keyboardSessions,  BASELINES.keyboard  * weeksInPeriod);
         const bassPct = baselinePct(agg.bassSessions,      BASELINES.bass      * weeksInPeriod);
         const trainPct = baselinePct(agg.baseTrainingSessions, BASELINES.baseTraining * weeksInPeriod);
@@ -1419,19 +1421,19 @@ async function renderYearlyContent(allEntries, year) {
             <div class="yearly-section-title">💻 Tech & Skills Training</div>
             <div class="yearly-stats-row">
                 <div class="yearly-big-stat">
-                    <div class="ybs-number">${agg.codingSessions}</div>
-                    <div class="ybs-label">Coding Sessions</div>
-                    <span class="ybs-badge ${codePct >= 100 ? '' : 'over'}">${codePct}% of target</span>
+                    <div class="ybs-number">${(agg.codingMins/60).toFixed(1)}</div>
+                    <div class="ybs-label">Coding Hours</div>
+                    <span class="ybs-badge ${codePct >= 100 ? '' : 'over'}">${codePct}% of 5hrs/wk target</span>
                 </div>
                 <div class="yearly-big-stat">
                     <div class="ybs-number">${agg.keyboardSessions}</div>
                     <div class="ybs-label">Keyboard Sessions</div>
-                    <span class="ybs-badge ${kbPct >= 100 ? '' : 'over'}">${kbPct}% of target</span>
+                    <span class="ybs-badge ${kbPct >= 100 ? '' : 'over'}">${kbPct}% of 1/wk target</span>
                 </div>
                 <div class="yearly-big-stat">
                     <div class="ybs-number">${agg.bassSessions}</div>
                     <div class="ybs-label">Bass Guitar Sessions</div>
-                    <span class="ybs-badge ${bassPct >= 100 ? '' : 'over'}">${bassPct}% of target</span>
+                    <span class="ybs-badge ${bassPct >= 100 ? '' : 'over'}">${bassPct}% of 1/wk target</span>
                 </div>
             </div>
             <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">
