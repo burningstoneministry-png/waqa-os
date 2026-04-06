@@ -1,15 +1,15 @@
 // api/ocr.js — Vercel Serverless Function
-// Calls Gemini 1.5 Flash Vision with Waqa's diary-specific format guide.
-// Returns structured diary data: { date, activities[], review }
+// Uses Groq API for AI commentary (chatbot) and OCR (vision).
 
 const fs   = require('fs');
 const path = require('path');
 
-// Load Waqa's diary format guide — sent to Gemini on every request
 const DIARY_FORMAT = fs.readFileSync(
     path.join(__dirname, '..', 'diary_format.md'),
     'utf8'
 );
+
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin',  '*');
@@ -19,45 +19,44 @@ module.exports = async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST')   return res.status(405).json({ error: 'Method not allowed' });
 
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) {
-        return res.status(500).json({ error: 'GEMINI_API_KEY not set in Vercel environment variables.' });
+    const GROQ_API_KEY = process.env.GROQ_API_KEY;
+    if (!GROQ_API_KEY) {
+        return res.status(500).json({ error: 'GROQ_API_KEY not set in Vercel environment variables.' });
     }
 
     try {
         const { imageBase64, mimeType, type, prompt: commentaryPrompt } = req.body;
 
-        // ── AI Commentary mode (text-only, no image) ──────────────────────────
+        // ── AI Commentary / Chatbot mode (text-only) ──────────────────────────
         if (type === 'commentary' && commentaryPrompt) {
-            const geminiRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${GEMINI_API_KEY}`,
-                {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{ text: commentaryPrompt }]
-                        }],
-                        generationConfig: {
-                            temperature:     0.7,
-                            maxOutputTokens: 512
-                        }
-                    })
-                }
-            );
-            if (!geminiRes.ok) {
-                const errBody = await geminiRes.text();
-                console.error('Gemini commentary error:', errBody);
+            const groqRes = await fetch(GROQ_API_URL, {
+                method:  'POST',
+                headers: {
+                    'Content-Type':  'application/json',
+                    'Authorization': `Bearer ${GROQ_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model:       'llama-3.3-70b-versatile',
+                    messages:    [{ role: 'user', content: commentaryPrompt }],
+                    temperature: 0.7,
+                    max_tokens:  512
+                })
+            });
+
+            if (!groqRes.ok) {
+                const errBody = await groqRes.text();
+                console.error('Groq commentary error:', errBody);
                 return res.status(502).json({ commentary: null, error: errBody });
             }
-            const data = await geminiRes.json();
-            const commentary = data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+
+            const data = await groqRes.json();
+            const commentary = data?.choices?.[0]?.message?.content || null;
             return res.status(200).json({ commentary });
         }
 
         if (!imageBase64) return res.status(400).json({ error: 'No image provided.' });
 
-        // ── Build prompt from Waqa's personal diary format guide ─────────────
+        // ── OCR / Vision mode (image + text) ──────────────────────────────────
         const prompt = `You are reading a handwritten diary page belonging to Waqa Atunaise.
 You have been given a detailed format guide that explains exactly how his diary is structured,
 what to extract, and what to ignore. Follow it precisely.
@@ -71,41 +70,42 @@ ${DIARY_FORMAT}
 Now read the diary image provided and return ONLY a raw JSON object following the structure
 and rules in the guide above. No markdown, no explanation — just the JSON.`;
 
-        // ── Call Gemini 2.0 Flash ─────────────────────────────────────────────
-        const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${GEMINI_API_KEY}`,
-            {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            { text: prompt },
-                            { inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } }
-                        ]
-                    }],
-                    generationConfig: {
-                        temperature:     0.1,   // low = precise, consistent extraction
-                        maxOutputTokens: 4096
-                    }
-                })
-            }
-        );
+        const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`;
 
-        if (!geminiRes.ok) {
-            const errBody = await geminiRes.text();
-            console.error('Gemini API error:', errBody);
-            return res.status(502).json({ error: 'Gemini API error ' + geminiRes.status, detail: errBody });
+        const groqRes = await fetch(GROQ_API_URL, {
+            method:  'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${GROQ_API_KEY}`
+            },
+            body: JSON.stringify({
+                model:      'llama-3.2-11b-vision-preview',
+                messages:   [{
+                    role:    'user',
+                    content: [
+                        { type: 'text',      text:      prompt },
+                        { type: 'image_url', image_url: { url: dataUrl } }
+                    ]
+                }],
+                temperature: 0.1,
+                max_tokens:  4096
+            })
+        });
+
+        if (!groqRes.ok) {
+            const errBody = await groqRes.text();
+            console.error('Groq OCR error:', errBody);
+            return res.status(502).json({ error: 'Groq API error ' + groqRes.status, detail: errBody });
         }
 
-        const geminiData = await geminiRes.json();
-        const rawText    = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const groqData = await groqRes.json();
+        const rawText  = groqData?.choices?.[0]?.message?.content || '';
 
         // ── Extract JSON from response ─────────────────────────────────────────
         const jsonMatch = rawText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
-            console.error('No JSON in Gemini response:', rawText);
-            return res.status(502).json({ error: 'Gemini returned unexpected format.', raw: rawText });
+            console.error('No JSON in Groq response:', rawText);
+            return res.status(502).json({ error: 'Groq returned unexpected format.', raw: rawText });
         }
 
         const parsed = JSON.parse(jsonMatch[0]);
