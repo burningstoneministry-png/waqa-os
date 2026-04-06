@@ -21,9 +21,61 @@ const BASELINES = {
     coding:            3,     // 3 sessions/week
     fasting:           3,     // 3 days/month
     baseTraining:      3,     // 3 sessions/week
+    keyboard:          3,     // 3 sessions/week
+    bass:              3,     // 3 sessions/week
     diaryWeek:         5,     // 5 logs/week
     diaryMonth:        20,    // 20 logs/month
 };
+
+// ─── Vision & Mission (Life Blueprint) ───────────────────────────────────────
+// This is Pastor Fire's life vision — stored here so every AI response can
+// measure his daily execution against it and challenge him accordingly.
+const PASTOR_FIRE_VISION = `
+PASTOR FIRE'S LIFE VISION & MISSION (measure all diary activity against this):
+
+MISSION (Daily Execution Target):
+To build innovative, technology-driven businesses that generate sustainable wealth,
+advance cutting-edge engineering (including flying transportation systems), and fund
+a global evangelism movement that reaches nations with the Gospel of Jesus Christ.
+He operates at the intersection of: Technology (IT, AI, engineering) + Business
+(income, systems, scalability) + Kingdom impact (evangelism, revival, discipleship).
+
+VISION (Long-term Build):
+1. FLYING CAR TECHNOLOGY — Develop affordable eVTOL (electric vertical takeoff and
+   landing) systems for island nations like Fiji. Solve traffic, geography, emergency
+   response. Phase 1 (Now–3yrs): IT services + coding + electronics skills.
+   Phase 2 (3–7yrs): Drones, battery systems, autonomous vehicles.
+   Phase 3 (7–15yrs): Full eVTOL flying car development.
+   Phase 4 (15+yrs): Pacific aerospace company, global export.
+
+2. FUND GLOBAL EVANGELISM — Finance reaching 1 billion souls to Christ. Build media
+   platforms, training systems, global outreach. Support pastors worldwide.
+
+3. REACTOR OF REVIVAL — 24/7 prayer and worship on the Prayer Mountain. National
+   and global revival engine. Disciple training and sending center.
+
+4. RAISE A NEW GENERATION — Equip children and others with discipline, technical
+   skills, and spiritual grounding. Build leaders for both technology and truth.
+
+BUSINESS ENGINE (Income → Engineering → Ministry):
+  IT Services (fast cash) → E-commerce → Transport/Uber → Farming → Tech R&D
+  All profits feed: Engineering development + Ministry funding + Land/infrastructure
+
+UNIQUE ADVANTAGES he already has:
+  IT & networking skills | Business mindset | Ministry connection | Land (huge asset)
+  | Vision beyond normal thinking — combining ALL of them.
+
+SKILLS BEING BUILT (critical for Phase 1):
+  Programming (Python, embedded systems) | Electronics | AI + automation
+  Keyboard/piano skills | Bass guitar | Physical fitness (Base Training)
+  Reading (business, tech, theology leaders)
+
+DAILY EXECUTION STANDARD:
+  Every day must move the needle on at least ONE of: prayer/spiritual depth,
+  technical skill-building (coding/electronics), business income, physical fitness,
+  or reading/learning. Diary consistency itself is a discipline metric.
+`;
+
 
 // ─── Duration Parser ──────────────────────────────────────────────────────────
 function parseDurationToMins(str) {
@@ -575,6 +627,7 @@ function aggregateActivities(activities) {
     const result = {
         prayerMins: 0, bibleStudyMins: 0, bookPages: 0, waterMl: 0,
         exerciseMins: 0, codingSessions: 0, fastingDays: 0, baseTrainingSessions: 0,
+        keyboardSessions: 0, bassSessions: 0,
         catMins: { spiritual: 0, skills: 0, health: 0 },
         totalMins: 0,
     };
@@ -596,6 +649,9 @@ function aggregateActivities(activities) {
         }
         else if (name.includes('coding') || name.includes('code'))        result.codingSessions += 1;
         else if (name.includes('fast') || name.includes('fasting'))       result.fastingDays += 1;
+        // Music skills
+        if (name.includes('keyboard') || name.includes('piano'))          result.keyboardSessions += 1;
+        if (name.includes('bass'))                                         result.bassSessions += 1;
     });
     return result;
 }
@@ -793,7 +849,7 @@ async function renderDailySummary() {
         `Running balance: $${todayRunningBal.toFixed(2)}`,
         healthNote,
         entry.review ? `Reflection: "${entry.review}"` : '',
-        `\nGive a warm 3-4 sentence daily coaching note. Mention prayer performance, food balance if logged, and spending habits if relevant. If sick or travelling, acknowledge that gracefully. End with encouragement.`
+        `\n${PASTOR_FIRE_VISION}\nGive a sharp 3-4 sentence daily coaching note. First, measure today's activities against the life vision above — did today move the needle toward the flying car mission, kingdom impact, or skill-building? Call out what was strong and what was missing. Be direct, pastoral, and inspiring. End with one bold challenge for tomorrow.`
     ].filter(Boolean).join('\n');
 
     const commentary = await getAICommentary(aiPrompt);
@@ -822,6 +878,7 @@ async function renderWeeklyView() {
     const weekAgg = {
         prayerMins: 0, bibleStudyMins: 0, exerciseMins: 0, waterMl: 0,
         codingSessions: 0, fastingDays: 0, baseTrainingSessions: 0,
+        keyboardSessions: 0, bassSessions: 0,
         diaryDays: 0, catMins: { spiritual: 0, skills: 0, health: 0 }, totalMins: 0,
     };
     let weekSpent = 0;
@@ -844,6 +901,8 @@ async function renderWeeklyView() {
             weekAgg.codingSessions       += dayAgg.codingSessions;
             weekAgg.fastingDays          += dayAgg.fastingDays;
             weekAgg.baseTrainingSessions += dayAgg.baseTrainingSessions;
+            weekAgg.keyboardSessions     += dayAgg.keyboardSessions;
+            weekAgg.bassSessions         += dayAgg.bassSessions;
             ['spiritual','skills','health'].forEach(c => {
                 weekAgg.catMins[c] += dayAgg.catMins[c];
                 dayMins[c]          = dayAgg.catMins[c];
@@ -880,9 +939,11 @@ async function renderWeeklyView() {
     const prayerPct   = baselinePct(weekAgg.prayerMins,     BASELINES.prayer * 7);
     const biblePct    = baselinePct(weekAgg.bibleStudyMins, BASELINES.bibleStudy * 7);
     const exercisePct = baselinePct(weekAgg.exerciseMins,   BASELINES.exercise * 7);
-    const codingPct   = baselinePct(weekAgg.codingSessions, BASELINES.coding);
+    const codingPct   = baselinePct(weekAgg.codingSessions,       BASELINES.coding);
     const trainPct    = baselinePct(weekAgg.baseTrainingSessions, BASELINES.baseTraining);
-    const diaryPct    = baselinePct(weekAgg.diaryDays,      BASELINES.diaryWeek);
+    const keyboardPct = baselinePct(weekAgg.keyboardSessions,     BASELINES.keyboard);
+    const bassPct     = baselinePct(weekAgg.bassSessions,         BASELINES.bass);
+    const diaryPct    = baselinePct(weekAgg.diaryDays,            BASELINES.diaryWeek);
 
     container.innerHTML = `
         ${renderCategoryCards(weekAgg.catMins, weekAgg.totalMins)}
@@ -893,9 +954,11 @@ async function renderWeeklyView() {
             ${renderBaselineRow('🙏', 'Prayer',        minsToDisplay(weekAgg.prayerMins),     prayerPct,   'var(--color-spiritual)', 'Baseline: 14hrs/week')}
             ${renderBaselineRow('📖', 'Bible Study',   minsToDisplay(weekAgg.bibleStudyMins), biblePct,    'var(--color-spiritual)', 'Baseline: 3.5hrs/week')}
             ${renderBaselineRow('💪', 'Exercise',      minsToDisplay(weekAgg.exerciseMins),   exercisePct, 'var(--color-health)',    'Baseline: 3.5hrs/week')}
-            ${renderBaselineRow('💻', 'Coding',        `${weekAgg.codingSessions} sessions`,  codingPct,   'var(--color-skills)',   'Baseline: 3 sessions/week')}
-            ${renderBaselineRow('🏋️', 'Base Training', `${weekAgg.baseTrainingSessions} sessions`, trainPct, 'var(--color-health)', 'Baseline: 3 sessions/week')}
-            ${renderBaselineRow('📔', 'Diary Updates', `${weekAgg.diaryDays}/7 days`,         diaryPct,    '#059669',               'Baseline: 5 days/week')}
+            ${renderBaselineRow('💻', 'Coding',          `${weekAgg.codingSessions} sessions`,       codingPct,   'var(--color-skills)',   'Baseline: 3 sessions/week')}
+            ${renderBaselineRow('🏋️', 'Base Training',  `${weekAgg.baseTrainingSessions} sessions`,  trainPct,    'var(--color-health)',   'Baseline: 3 sessions/week')}
+            ${renderBaselineRow('🎹', 'Keyboard',        `${weekAgg.keyboardSessions} sessions`,      keyboardPct, 'var(--color-skills)',   'Baseline: 3 sessions/week')}
+            ${renderBaselineRow('🎸', 'Bass Guitar',     `${weekAgg.bassSessions} sessions`,          bassPct,     'var(--color-skills)',   'Baseline: 3 sessions/week')}
+            ${renderBaselineRow('📔', 'Diary Updates',   `${weekAgg.diaryDays}/7 days`,               diaryPct,    '#059669',               'Baseline: 5 days/week')}
         </div>
         ${weekSpent > 0 ? `
         <div class="section-title mt-1">💰 Weekly Spending</div>
@@ -909,7 +972,7 @@ async function renderWeeklyView() {
         </div>
     `;
 
-    const aiPrompt = `Weekly summary for Pastor Fire:\nPrayer: ${minsToDisplay(weekAgg.prayerMins)} (${prayerPct}% of 14hr baseline)\nBible Study: ${minsToDisplay(weekAgg.bibleStudyMins)} (${biblePct}%)\nExercise: ${minsToDisplay(weekAgg.exerciseMins)} (${exercisePct}%)\nCoding: ${weekAgg.codingSessions} sessions (${codingPct}%)\nDiary logged: ${weekAgg.diaryDays}/7 days (${diaryPct}% — baseline is 5/week)\nSpent: $${weekSpent.toFixed(2)}\n\nWrite a 3-4 sentence warm pastoral weekly coaching note. Comment on prayer vs 14hr target, diary consistency vs 5-day baseline, and spending if relevant. End with motivation for next week.`;
+    const aiPrompt = `${PASTOR_FIRE_VISION}\nWeekly diary summary for Pastor Fire:\nPrayer: ${minsToDisplay(weekAgg.prayerMins)} (${prayerPct}% of 14hr baseline)\nBible Study: ${minsToDisplay(weekAgg.bibleStudyMins)} (${biblePct}%)\nExercise: ${minsToDisplay(weekAgg.exerciseMins)} (${exercisePct}%)\nCoding: ${weekAgg.codingSessions} sessions (${codingPct}%)\nKeyboard: ${weekAgg.keyboardSessions} sessions (${keyboardPct}%)\nBass: ${weekAgg.bassSessions} sessions (${bassPct}%)\nBase Training: ${weekAgg.baseTrainingSessions} sessions (${trainPct}%)\nDiary logged: ${weekAgg.diaryDays}/7 days (${diaryPct}%)\nSpent: $${weekSpent.toFixed(2)}, Income: $${weekIncome.toFixed(2)}\n\nWrite a punchy 4-5 sentence weekly coaching challenge. Measure this week's execution against the life vision above. Score the week on spiritual depth, technical skill-building (coding/keyboard/bass), physical training, and financial discipline. Be honest — celebrate wins and name what was missing. End with a bold, specific challenge for next week tied to the flying car / kingdom vision.`;
 
     const commentary = await getAICommentary(aiPrompt);
     const aiEl = document.getElementById('weekly-ai-text');
@@ -934,6 +997,7 @@ async function renderMonthlyReview() {
     const monthAgg = {
         prayerMins: 0, bibleStudyMins: 0, exerciseMins: 0,
         codingSessions: 0, fastingDays: 0, baseTrainingSessions: 0,
+        keyboardSessions: 0, bassSessions: 0,
         diaryDays: 0, catMins: { spiritual: 0, skills: 0, health: 0 }, totalMins: 0,
     };
     let monthSpent   = 0;
@@ -949,6 +1013,8 @@ async function renderMonthlyReview() {
         monthAgg.codingSessions       += dayAgg.codingSessions;
         monthAgg.fastingDays          += dayAgg.fastingDays;
         monthAgg.baseTrainingSessions += dayAgg.baseTrainingSessions;
+        monthAgg.keyboardSessions     += dayAgg.keyboardSessions;
+        monthAgg.bassSessions         += dayAgg.bassSessions;
         ['spiritual','skills','health'].forEach(c => { monthAgg.catMins[c] += dayAgg.catMins[c]; });
         monthAgg.totalMins += dayAgg.totalMins;
         if (entry.finances) {
@@ -967,7 +1033,9 @@ async function renderMonthlyReview() {
     const fastingPct  = baselinePct(monthAgg.fastingDays,    BASELINES.fasting);
     const diaryPct    = baselinePct(monthAgg.diaryDays,      BASELINES.diaryMonth);
     const weeksElapsed = Math.max(1, Math.ceil(daysSoFar / 7));
-    const codingPct   = baselinePct(monthAgg.codingSessions, BASELINES.coding * weeksElapsed);
+    const codingPct   = baselinePct(monthAgg.codingSessions,       BASELINES.coding       * weeksElapsed);
+    const keyboardPctM = baselinePct(monthAgg.keyboardSessions,    BASELINES.keyboard     * weeksElapsed);
+    const bassPctM     = baselinePct(monthAgg.bassSessions,        BASELINES.bass         * weeksElapsed);
 
     container.innerHTML = `
         <div class="month-header"><h3>${monthName}</h3></div>
@@ -978,9 +1046,11 @@ async function renderMonthlyReview() {
             ${renderBaselineRow('🙏', 'Prayer',        `${prayerHrs.toFixed(1)}hrs`,          prayerPct,   'var(--color-spiritual)', `Baseline: 60hrs/month (2hrs × days)`)}
             ${renderBaselineRow('📖', 'Bible Study',   minsToDisplay(monthAgg.bibleStudyMins), biblePct,   'var(--color-spiritual)', `Baseline: 30mins × ${daysSoFar} days`)}
             ${renderBaselineRow('💪', 'Exercise',      minsToDisplay(monthAgg.exerciseMins),   exercisePct,'var(--color-health)',    `Baseline: 30mins × ${daysSoFar} days`)}
-            ${renderBaselineRow('🕊️', 'Fasting',       `${monthAgg.fastingDays} day(s)`,       fastingPct, '#7c3aed',               'Baseline: 3 days/month')}
-            ${renderBaselineRow('💻', 'Coding',        `${monthAgg.codingSessions} sessions`,  codingPct,  'var(--color-skills)',   'Baseline: 3 sessions/week')}
-            ${renderBaselineRow('📔', 'Diary Consistency', `${monthAgg.diaryDays}/${daysSoFar} days`, diaryPct, '#059669', 'Baseline: 20 logs/month')}
+            ${renderBaselineRow('🕊️', 'Fasting',       `${monthAgg.fastingDays} day(s)`,            fastingPct,  '#7c3aed',             'Baseline: 3 days/month')}
+            ${renderBaselineRow('💻', 'Coding',        `${monthAgg.codingSessions} sessions`,       codingPct,   'var(--color-skills)', 'Baseline: 3 sessions/week')}
+            ${renderBaselineRow('🎹', 'Keyboard',      `${monthAgg.keyboardSessions} sessions`,     keyboardPctM,'var(--color-skills)', 'Baseline: 3 sessions/week')}
+            ${renderBaselineRow('🎸', 'Bass Guitar',   `${monthAgg.bassSessions} sessions`,         bassPctM,    'var(--color-skills)', 'Baseline: 3 sessions/week')}
+            ${renderBaselineRow('📔', 'Diary Consistency', `${monthAgg.diaryDays}/${daysSoFar} days`, diaryPct,  '#059669',             'Baseline: 20 logs/month')}
         </div>
         ${monthSpent > 0 ? `
         <div class="section-title mt-1">💰 Monthly Spending</div>
@@ -994,7 +1064,7 @@ async function renderMonthlyReview() {
         </div>
     `;
 
-    const aiPrompt = `Monthly summary for Pastor Fire — ${monthName}:\nPrayer: ${prayerHrs.toFixed(1)}hrs (${prayerPct}% of 60hr baseline)${milestone ? ' — MILESTONE ACHIEVED!' : ''}\nBible Study: ${minsToDisplay(monthAgg.bibleStudyMins)} (${biblePct}%)\nExercise: ${minsToDisplay(monthAgg.exerciseMins)} (${exercisePct}%)\nFasting: ${monthAgg.fastingDays} days (${fastingPct}% of 3-day baseline)\nCoding: ${monthAgg.codingSessions} sessions (${codingPct}%)\nDiary consistency: ${monthAgg.diaryDays}/${daysSoFar} days (${diaryPct}% — baseline is 20 logs/month)\nTotal spent: $${monthSpent.toFixed(2)}\n\nWrite a 4-5 sentence pastoral monthly review. Celebrate 60hr prayer milestone if hit. Comment on spending habits and diary consistency baseline of 20/month. End powerfully.`;
+    const aiPrompt = `${PASTOR_FIRE_VISION}\nMonthly diary summary for Pastor Fire — ${monthName}:\nPrayer: ${prayerHrs.toFixed(1)}hrs (${prayerPct}% of 60hr baseline)${milestone ? ' — MILESTONE ACHIEVED! 🏆' : ''}\nBible Study: ${minsToDisplay(monthAgg.bibleStudyMins)} (${biblePct}%)\nExercise: ${minsToDisplay(monthAgg.exerciseMins)} (${exercisePct}%)\nFasting: ${monthAgg.fastingDays} days (${fastingPct}% of 3-day baseline)\nCoding: ${monthAgg.codingSessions} sessions (${codingPct}%)\nKeyboard: ${monthAgg.keyboardSessions} sessions (${keyboardPctM}%)\nBass Guitar: ${monthAgg.bassSessions} sessions (${bassPctM}%)\nDiary consistency: ${monthAgg.diaryDays}/${daysSoFar} days (${diaryPct}%)\nTotal spent: $${monthSpent.toFixed(2)}, Income: $${monthIncome.toFixed(2)}\n\nWrite a powerful 5-6 sentence monthly review. Use the life vision above as the measuring stick — how well did this month advance the mission? Celebrate the prayer milestone if hit. Score technical skill-building (coding/keyboard/bass) — these are Phase 1 of the flying car vision. Be a coach who challenges, not just encourages. End with a declaration for next month.`;
 
     const commentary = await getAICommentary(aiPrompt);
     const aiEl = document.getElementById('monthly-ai-text');
@@ -1068,7 +1138,7 @@ async function renderYearlyContent(allEntries, year) {
     // ── Aggregate everything ──────────────────────────────────────────────────
     const agg = {
         prayerMins: 0, bibleStudyMins: 0, exerciseMins: 0, fastingDays: 0,
-        codingSessions: 0, baseTrainingSessions: 0,
+        codingSessions: 0, baseTrainingSessions: 0, keyboardSessions: 0, bassSessions: 0,
         catMins: { spiritual: 0, skills: 0, health: 0 },
         totalMins: 0, daysLogged: 0, waterMl: 0,
         books: {},        // { title: { pages, audio, count } }
@@ -1107,8 +1177,10 @@ async function renderYearlyContent(allEntries, year) {
                 agg.exerciseMins += mins;
                 if (name.includes('base training')) agg.baseTrainingSessions++;
             }
-            if (name.includes('coding') || name.includes('code')) agg.codingSessions++;
+            if (name.includes('coding') || name.includes('code'))  agg.codingSessions++;
             if (name.includes('fast') || name.includes('fasting')) agg.fastingDays++;
+            if (name.includes('keyboard') || name.includes('piano')) agg.keyboardSessions++;
+            if (name.includes('bass'))                               agg.bassSessions++;
 
             // Books
             if ((name.includes('read') || name.includes('book')) && a.bookTitle) {
@@ -1233,15 +1305,51 @@ async function renderYearlyContent(allEntries, year) {
 
     // ── EXERCISE / TRAINING filter ────────────────────────────────────────────
     if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'exercise') {
-        const exHrs = (agg.exerciseMins / 60);
-        const pct   = baselinePct(agg.exerciseMins, BASELINES.exercise * daysInPeriod);
+        const exHrs  = (agg.exerciseMins / 60);
+        const exPct  = baselinePct(agg.exerciseMins, BASELINES.exercise * daysInPeriod);
+        const weeksInPeriod = yearlyActiveMonth === 'all' ? 52 : 4;
+        const codePct = baselinePct(agg.codingSessions,    BASELINES.coding    * weeksInPeriod);
+        const kbPct   = baselinePct(agg.keyboardSessions,  BASELINES.keyboard  * weeksInPeriod);
+        const bassPct = baselinePct(agg.bassSessions,      BASELINES.bass      * weeksInPeriod);
+        const trainPct = baselinePct(agg.baseTrainingSessions, BASELINES.baseTraining * weeksInPeriod);
         html += `<div class="yearly-section">
-            <div class="section-title">💪 Exercise & Training</div>
-            <div class="yearly-big-stat">
-                <span class="ybs-number">${exHrs.toFixed(1)}</span>
-                <span class="ybs-label">total hours of training</span>
+            <div class="yearly-section-title">💪 Physical Training</div>
+            <div class="yearly-stats-row">
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${exHrs.toFixed(1)}</div>
+                    <div class="ybs-label">Exercise Hours</div>
+                    <span class="ybs-badge ${exPct >= 100 ? '' : 'over'}">${exPct}% of target</span>
+                </div>
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${agg.baseTrainingSessions}</div>
+                    <div class="ybs-label">Base Training Sessions</div>
+                    <span class="ybs-badge ${trainPct >= 100 ? '' : 'over'}">${trainPct}% of target</span>
+                </div>
             </div>
-            ${renderBaselineRow('💪', 'Exercise', `${exHrs.toFixed(1)}hrs`, pct, 'var(--color-health)', `Target: 30mins/day × ${daysInPeriod} days`)}
+        </div>`;
+
+        html += `<div class="yearly-section">
+            <div class="yearly-section-title">💻 Tech & Skills Training</div>
+            <div class="yearly-stats-row">
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${agg.codingSessions}</div>
+                    <div class="ybs-label">Coding Sessions</div>
+                    <span class="ybs-badge ${codePct >= 100 ? '' : 'over'}">${codePct}% of target</span>
+                </div>
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${agg.keyboardSessions}</div>
+                    <div class="ybs-label">Keyboard Sessions</div>
+                    <span class="ybs-badge ${kbPct >= 100 ? '' : 'over'}">${kbPct}% of target</span>
+                </div>
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${agg.bassSessions}</div>
+                    <div class="ybs-label">Bass Guitar Sessions</div>
+                    <span class="ybs-badge ${bassPct >= 100 ? '' : 'over'}">${bassPct}% of target</span>
+                </div>
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">
+                🚀 Phase 1 of Flying Car Vision: Every coding session brings you closer to embedded systems mastery.
+            </div>
         </div>`;
     }
 
@@ -1423,7 +1531,7 @@ Diary logged: ${agg.daysLogged} days
 Health: ${agg.healthyDays} healthy days, ${agg.sickDays} sick days, ${agg.recoveringDays} recovery days, ${agg.travelDays} travel days, ${agg.restDays} rest days
 Total Income: $${agg.totalIncome.toFixed(2)}, Total Spent: $${agg.totalExpenses.toFixed(2)}, Net: $${netPosition.toFixed(2)}, Running Balance: $${yearRunningBal.toFixed(2)}
 
-Write a 5-6 sentence powerful yearly review. Celebrate prayer milestones. Comment on reading habits vs high-performing leaders. Speak to financial discipline and net position. If there were sick days, acknowledge resilience. End with a bold vision statement for the coming year. Tone: pastoral, inspiring, honest.`;
+Write a powerful 6-8 sentence yearly review. Use the life vision above as the measuring stick for every area. Celebrate spiritual milestones (prayer, fasting, Bible). Score Phase 1 progress: coding sessions, keyboard, bass — these skills directly serve the engineering and media vision. Comment on financial discipline and net position as fuel for the mission. If sick days occurred, note resilience. End with a bold, specific declaration for the coming year — name one area where he must push harder to hit the flying car / kingdom timeline. Tone: prophetic, pastoral, direct, inspiring.`;
 
     const commentary = await getAICommentary(aiPrompt);
     const aiEl = document.getElementById('yearly-ai-text');
@@ -1514,7 +1622,7 @@ async function sendChatMessage() {
     chatEl.scrollTop = chatEl.scrollHeight;
 
     // Build context from recent data
-    let context = 'You are AI Coach for Pastor Fire, a pastor in Fiji. You have access to his diary data.\n';
+    let context = `You are AI Coach for Pastor Fire, a pastor in Fiji. You have full access to his diary data AND his life vision below. Your job is not just to encourage — you are a sharp, honest coach who measures every diary entry against the vision and challenges him to execute daily.\n${PASTOR_FIRE_VISION}\n`;
     try {
         const [todayEntry, weekEntries, monthEntries] = await Promise.all([
             storage.getEntry(new Date().toISOString().slice(0, 10)),
@@ -1592,7 +1700,7 @@ async function sendChatMessage() {
     const history = storage.getChatHistory().slice(-10);
     const historyText = history.map(m => `${m.role === 'user' ? 'Pastor Fire' : 'AI Coach'}: ${m.content}`).join('\n');
 
-    const fullPrompt = `${context}\n\nConversation so far:\n${historyText}\n\nPastor Fire: ${message}\n\nAI Coach (respond warmly, concisely, and helpfully — 2-4 sentences max unless detail is needed):`;
+    const fullPrompt = `${context}\n\nConversation so far:\n${historyText}\n\nPastor Fire: ${message}\n\nAI Coach (respond as a sharp, honest pastoral coach who always connects the answer back to the life vision. Be warm but direct. Challenge him when needed. 2-4 sentences max unless detail is needed. If asking about sick days, travel, health — pull from diary health data):`;
 
     const reply = await getAICommentary(fullPrompt);
 

@@ -233,9 +233,12 @@ const storage = {
             { name: 'Exercise',      category: 'health'    },
             { name: 'Base Training', category: 'health'    },
             { name: 'Walking',       category: 'health'    },
-            { name: 'Reading',       category: 'skills'    },
-            { name: 'Study',         category: 'skills'    },
-            { name: 'Coding',        category: 'skills'    },
+            { name: 'Reading',          category: 'skills'    },
+            { name: 'Study',            category: 'skills'    },
+            { name: 'Coding',           category: 'skills'    },
+            { name: 'Keyboard',         category: 'skills'    },
+            { name: 'Bass Guitar',      category: 'skills'    },
+            { name: 'Keyboard Training',category: 'skills'    },
         ];
     }
 };
