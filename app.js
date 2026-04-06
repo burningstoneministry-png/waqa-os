@@ -517,9 +517,15 @@ async function saveEntry() {
         sickDays: (healthStatus === 'sick' || healthStatus === 'recovering')
                     ? (parseInt(sickDaysEl.value) || 1) : 0
     };
+    const sleep = {
+        wakeTime:    document.getElementById('wake-time').value   || '',
+        wakeReason:  document.getElementById('wake-reason').value  || '',
+        sleepTime:   document.getElementById('sleep-time').value  || '',
+        sleepReason: document.getElementById('sleep-reason').value || '',
+    };
 
     showToast('Saving…', 'info');
-    const saved = await storage.saveEntry(date, { activities, food, finances, review, health });
+    const saved = await storage.saveEntry(date, { activities, food, finances, review, health, sleep });
     if (saved) {
         showToast('Entry saved ✅', 'success');
         resetForm();
@@ -545,7 +551,11 @@ function resetForm() {
     addActivityField();
     addExpenseRow();
     addIncomeRow();
-    document.getElementById('entry-date').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('entry-date').value    = new Date().toISOString().slice(0, 10);
+    document.getElementById('wake-time').value      = '';
+    document.getElementById('wake-reason').value    = '';
+    document.getElementById('sleep-time').value     = '';
+    document.getElementById('sleep-reason').value   = '';
     window._editingFullList = null;
     resetHealthStatus();
     loadRunningBalance();
@@ -616,6 +626,14 @@ async function loadExistingIntoForm(date) {
     // Load health status
     loadHealthStatus(entry.health || null);
 
+    // Load sleep schedule
+    if (entry.sleep) {
+        document.getElementById('wake-time').value    = entry.sleep.wakeTime    || '';
+        document.getElementById('wake-reason').value  = entry.sleep.wakeReason  || '';
+        document.getElementById('sleep-time').value   = entry.sleep.sleepTime   || '';
+        document.getElementById('sleep-reason').value = entry.sleep.sleepReason || '';
+    }
+
     window._editingFullList = date;
     showToast('Loaded for editing. Saving will replace the full entry for this date.', 'info');
     const banner = document.getElementById('existing-banner');
@@ -667,6 +685,66 @@ function parseWaterMl(waterStr) {
 }
 
 // ─── Finance card helper ──────────────────────────────────────────────────────
+// ─── Sleep Schedule Display ───────────────────────────────────────────────────
+const SLEEP_TARGETS = { wake: '04:00', sleep: '22:00' }; // 4AM wake, 10PM sleep
+
+function formatTime12(time24) {
+    if (!time24) return null;
+    const [h, m] = time24.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12  = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function sleepTimeDiff(actual, target) {
+    // Returns diff in minutes (positive = late, negative = early)
+    if (!actual || !target) return null;
+    const [ah, am] = actual.split(':').map(Number);
+    const [th, tm] = target.split(':').map(Number);
+    return (ah * 60 + am) - (th * 60 + tm);
+}
+
+function renderSleepRow(sleep) {
+    if (!sleep || (!sleep.wakeTime && !sleep.sleepTime)) return '';
+    const wakeDiff  = sleepTimeDiff(sleep.wakeTime,  SLEEP_TARGETS.wake);
+    const sleepDiff = sleepTimeDiff(sleep.sleepTime, SLEEP_TARGETS.sleep);
+
+    const wakeTag = wakeDiff !== null
+        ? (wakeDiff > 15
+            ? `<span class="sleep-tag late">+${Math.round(wakeDiff)}min late</span>`
+            : wakeDiff < -15
+                ? `<span class="sleep-tag early">${Math.abs(Math.round(wakeDiff))}min early 🎉</span>`
+                : `<span class="sleep-tag ontime">On time ✅</span>`)
+        : '';
+
+    const sleepTag = sleepDiff !== null
+        ? (sleepDiff > 15
+            ? `<span class="sleep-tag late">+${Math.round(sleepDiff)}min late</span>`
+            : sleepDiff < -15
+                ? `<span class="sleep-tag early">${Math.abs(Math.round(sleepDiff))}min early 🎉</span>`
+                : `<span class="sleep-tag ontime">On time ✅</span>`)
+        : '';
+
+    return `<div class="sleep-summary-row">
+        ${sleep.wakeTime ? `
+        <div class="sleep-summary-item">
+            <span class="sleep-sum-icon">🌅</span>
+            <div>
+                <div class="sleep-sum-time">${formatTime12(sleep.wakeTime)} ${wakeTag}</div>
+                <div class="sleep-sum-label">Wake Up${sleep.wakeReason ? ` — ${sleep.wakeReason}` : ''}</div>
+            </div>
+        </div>` : ''}
+        ${sleep.sleepTime ? `
+        <div class="sleep-summary-item">
+            <span class="sleep-sum-icon">🌙</span>
+            <div>
+                <div class="sleep-sum-time">${formatTime12(sleep.sleepTime)} ${sleepTag}</div>
+                <div class="sleep-sum-label">Sleep${sleep.sleepReason ? ` — ${sleep.sleepReason}` : ''}</div>
+            </div>
+        </div>` : ''}
+    </div>`;
+}
+
 // ─── Health Badge ─────────────────────────────────────────────────────────────
 function renderHealthBadge(health) {
     if (!health || health.status === 'healthy') return '';
@@ -774,6 +852,7 @@ async function renderDailySummary() {
     const food     = entry.food     || {};
     const finances = entry.finances || { expenses: [], income: [], bankBalance: '' };
     const health   = entry.health   || { status: 'healthy', sickDays: 0 };
+    const sleep    = entry.sleep    || { wakeTime: '', wakeReason: '', sleepTime: '', sleepReason: '' };
     const waterMl  = parseWaterMl(food.water);
     const totalSpent  = (finances.expenses || []).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
     const totalIncome = (finances.income   || []).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
@@ -826,6 +905,7 @@ async function renderDailySummary() {
                 <span class="expense-amount"><strong>${formatCurrency(totalSpent)}</strong></span>
             </div>
         </div>` : ''}
+        ${renderSleepRow(sleep)}
         ${renderHealthBadge(health)}
         ${entry.review ? `<div class="review-box"><strong>Reflection:</strong> ${entry.review}</div>` : ''}
         <div class="ai-commentary-box">
@@ -836,6 +916,12 @@ async function renderDailySummary() {
 
     const healthNote = health.status !== 'healthy'
         ? `Health: ${health.status}${health.sickDays > 0 ? ` (day ${health.sickDays} of illness)` : ''}` : '';
+    const wakeDiff  = sleepTimeDiff(sleep.wakeTime,  SLEEP_TARGETS.wake);
+    const sleepDiff = sleepTimeDiff(sleep.sleepTime, SLEEP_TARGETS.sleep);
+    const sleepNote = [
+        sleep.wakeTime  ? `Wake up: ${formatTime12(sleep.wakeTime)} (target 4:00 AM${wakeDiff !== null ? `, ${wakeDiff > 0 ? '+' : ''}${Math.round(wakeDiff)}min` : ''})${sleep.wakeReason ? ` — reason: ${sleep.wakeReason}` : ''}` : '',
+        sleep.sleepTime ? `Sleep:    ${formatTime12(sleep.sleepTime)} (target 10:00 PM${sleepDiff !== null ? `, ${sleepDiff > 0 ? '+' : ''}${Math.round(sleepDiff)}min` : ''})${sleep.sleepReason ? ` — reason: ${sleep.sleepReason}` : ''}` : '',
+    ].filter(Boolean).join('\n');
 
     const aiPrompt = [
         `Daily diary for Pastor Fire (${today}):`,
@@ -848,8 +934,9 @@ async function renderDailySummary() {
         totalIncome > 0 ? `Income received: $${totalIncome.toFixed(2)}` : '',
         `Running balance: $${todayRunningBal.toFixed(2)}`,
         healthNote,
+        sleepNote,
         entry.review ? `Reflection: "${entry.review}"` : '',
-        `\n${PASTOR_FIRE_VISION}\nGive a sharp 3-4 sentence daily coaching note. First, measure today's activities against the life vision above — did today move the needle toward the flying car mission, kingdom impact, or skill-building? Call out what was strong and what was missing. Be direct, pastoral, and inspiring. End with one bold challenge for tomorrow.`
+        `\n${PASTOR_FIRE_VISION}\nGive a sharp 3-4 sentence daily coaching note. If wake time is later than 4:00 AM, call it out directly — early rising is non-negotiable for the mission. First, measure today's activities against the life vision above — did today move the needle toward the flying car mission, kingdom impact, or skill-building? Call out what was strong and what was missing. Be direct, pastoral, and inspiring. End with one bold challenge for tomorrow.`
     ].filter(Boolean).join('\n');
 
     const commentary = await getAICommentary(aiPrompt);
@@ -1642,6 +1729,11 @@ async function sendChatMessage() {
             if (todayEntry.health && todayEntry.health.status !== 'healthy') {
                 const h = todayEntry.health;
                 context += `, Health: ${h.status}${h.sickDays > 0 ? ` (day ${h.sickDays})` : ''}`;
+            }
+            if (todayEntry.sleep) {
+                const s = todayEntry.sleep;
+                if (s.wakeTime)  context += `, Woke up: ${formatTime12(s.wakeTime)} (target 4AM${s.wakeReason ? `, reason: ${s.wakeReason}` : ''})`;
+                if (s.sleepTime) context += `, Slept: ${formatTime12(s.sleepTime)} (target 10PM${s.sleepReason ? `, reason: ${s.sleepReason}` : ''})`;
             }
             if (todayEntry.review) context += `, Reflection: "${todayEntry.review}"`;
         }

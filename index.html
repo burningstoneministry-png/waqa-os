@@ -53,12 +53,30 @@
     <!-- ─── Write Diary ─────────────────────────────────────────────── -->
     <div id="tab-write" class="tab-content active">
 
-        <!-- Date -->
+        <!-- Date + Sleep Schedule -->
         <div class="card">
             <div class="card-title">✏️ Write Diary Entry</div>
             <div class="form-group">
                 <label for="entry-date">📅 Date</label>
                 <input type="date" id="entry-date">
+            </div>
+
+            <!-- Wake Up / Sleep Time -->
+            <div class="sleep-schedule-section">
+                <div class="sleep-row">
+                    <span class="sleep-icon">🌅</span>
+                    <span class="sleep-label">Wake Up</span>
+                    <input type="time" id="wake-time" class="sleep-time-input">
+                    <span class="sleep-reason-label">Reason</span>
+                    <input type="text" id="wake-reason" class="sleep-reason-input" placeholder="e.g. Alarm, overslept...">
+                </div>
+                <div class="sleep-row">
+                    <span class="sleep-icon">🌙</span>
+                    <span class="sleep-label">Sleep</span>
+                    <input type="time" id="sleep-time" class="sleep-time-input">
+                    <span class="sleep-reason-label">Reason</span>
+                    <input type="text" id="sleep-reason" class="sleep-reason-input" placeholder="e.g. Late work, tired early...">
+                </div>
             </div>
         </div>
 

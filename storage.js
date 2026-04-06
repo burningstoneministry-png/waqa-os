@@ -21,6 +21,7 @@ const storage = {
             finances:   row.finances   || { expenses: [], income: [], bankBalance: '' },
             review:     row.review     || '',
             health:     row.health     || { status: 'healthy', sickDays: 0 },
+            sleep:      row.sleep      || { wakeTime: '', wakeReason: '', sleepTime: '', sleepReason: '' },
             savedAt:    row.saved_at
         };
     },
@@ -33,6 +34,7 @@ const storage = {
             finances:   e.finances   || { expenses: [], income: [], bankBalance: '' },
             review:     e.review     || '',
             health:     e.health     || { status: 'healthy', sickDays: 0 },
+            sleep:      e.sleep      || { wakeTime: '', wakeReason: '', sleepTime: '', sleepReason: '' },
             saved_at:   e.savedAt    || new Date().toISOString()
         }));
     },
@@ -60,6 +62,7 @@ const storage = {
                             : (existing ? existing.finances : { expenses: [], bankBalance: '' });
 
         const health = entry.health || (existing ? existing.health : { status: 'healthy', sickDays: 0 });
+        const sleep  = entry.sleep  || (existing ? existing.sleep  : { wakeTime: '', wakeReason: '', sleepTime: '', sleepReason: '' });
 
         const { data, error } = await this.client
             .from('diary_entries')
@@ -69,6 +72,7 @@ const storage = {
                 food,
                 finances,
                 health,
+                sleep,
                 review:     entry.review || (existing ? existing.review : '') || '',
                 saved_at:   new Date().toISOString()
             }, { onConflict: 'date' })

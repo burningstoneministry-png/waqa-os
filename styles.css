@@ -952,6 +952,8 @@ textarea { resize: vertical; min-height: 80px; }
     .expense-row { grid-template-columns: 1fr 110px 36px; }
     .summary-title-row { flex-direction: column; align-items: flex-start; }
     .header-quote { display: none; }
+    .sleep-row { grid-template-columns: 24px 60px 100px 44px 1fr; gap: 0.35rem; }
+    .sleep-summary-row { flex-direction: column; gap: 0.6rem; }
 }
 @media (max-width: 768px) {
     .header-quote { max-width: 160px; }
@@ -1325,6 +1327,92 @@ textarea { resize: vertical; min-height: 80px; }
     border: 1.5px dashed #a5d6a7;
 }
 .btn-add-income:hover { background: #c8e6c9; border-color: #66bb6a; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   SLEEP SCHEDULE — Form
+═══════════════════════════════════════════════════════════════════ */
+.sleep-schedule-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1.5px solid var(--border);
+}
+.sleep-row {
+    display: grid;
+    grid-template-columns: 24px 70px 110px 52px 1fr;
+    align-items: center;
+    gap: 0.5rem;
+}
+.sleep-icon  { font-size: 1.1rem; text-align: center; }
+.sleep-label { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+.sleep-time-input {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.38rem 0.55rem;
+    font-size: 0.85rem;
+    font-family: var(--font);
+    outline: none;
+    color: var(--text);
+    transition: border-color 0.2s;
+    width: 100%;
+}
+.sleep-time-input:focus { border-color: #0F3460; }
+.sleep-reason-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+}
+.sleep-reason-input {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.38rem 0.65rem;
+    font-size: 0.82rem;
+    font-family: var(--font);
+    outline: none;
+    color: var(--text);
+    transition: border-color 0.2s;
+    width: 100%;
+}
+.sleep-reason-input:focus { border-color: #0F3460; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   SLEEP SCHEDULE — Daily Summary Display
+═══════════════════════════════════════════════════════════════════ */
+.sleep-summary-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: #f0f4ff;
+    border: 1.5px solid #c7d7ff;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+}
+.sleep-summary-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex: 1;
+    min-width: 160px;
+}
+.sleep-sum-icon  { font-size: 1.4rem; flex-shrink: 0; }
+.sleep-sum-time  { font-size: 0.95rem; font-weight: 700; color: #0F3460; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.sleep-sum-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+/* Wake/sleep tags */
+.sleep-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 12px;
+}
+.sleep-tag.late    { background: #fce4ec; color: #c62828; }
+.sleep-tag.early   { background: #e8f5e9; color: #2e7d32; }
+.sleep-tag.ontime  { background: #e8f5e9; color: #2e7d32; }
 
 /* ═══════════════════════════════════════════════════════════════════
    HEALTH STATUS — Form Pills
