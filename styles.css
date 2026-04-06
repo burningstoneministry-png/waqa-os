@@ -882,26 +882,88 @@ textarea { resize: vertical; min-height: 80px; }
 .toast.toast-error { background: #dc2626; }
 .toast.toast-info { background: #0F3460; }
 
-/* ─── Responsive ─────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-    main { padding: 1rem; }
-    header { padding: 1rem; }
-    header h1 { font-size: 1.1rem; }
-    .activity-row { grid-template-columns: 80px 1fr 36px; grid-template-rows: auto auto; }
-    .act-text-wrap, .act-duration, .act-category { grid-column: 1 / 3; }
-    .btn-remove { grid-row: 1; grid-column: 3; }
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Tablet (≤ 1024px)
+═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+    main { max-width: 100%; padding: 1.25rem 1.25rem; }
+    .category-cards { grid-template-columns: repeat(2, 1fr); }
     .week-grid { grid-template-columns: repeat(4, 1fr); }
-    .week-stats { grid-template-columns: repeat(2, 1fr); }
-    .cat-bar-row { grid-template-columns: 70px 1fr 60px; }
-    .activity-item { grid-template-columns: 50px 1fr; }
-    .act-dur, .act-cat-badge { display: none; }
-    .category-cards { grid-template-columns: repeat(2, 1fr); }
+    .yearly-stats-row { grid-template-columns: repeat(3, 1fr); }
 }
-@media (max-width: 480px) {
-    .week-grid { grid-template-columns: repeat(3, 1fr); }
-    .tab-btn { padding: 0.75rem 1rem; font-size: 0.85rem; }
-    .category-cards { grid-template-columns: repeat(2, 1fr); }
-    .cat-card-pct { font-size: 1.3rem; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Tablet (≤ 768px)
+═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    /* Layout */
+    main { padding: 1rem; }
+
+    /* Header */
+    header { padding: 0.75rem 1rem; flex-wrap: wrap; gap: 0.4rem; }
+    header h1 { font-size: 1.05rem; }
+    .header-quote { display: none; } /* hide quotes on tablet to save space */
+    .header-actions { gap: 0.35rem; }
+    .btn-header { padding: 0.4rem 0.65rem; font-size: 0.75rem; }
+    .btn-logout { display: none; } /* use nav logout instead on mobile */
+
+    /* Nav */
+    nav { gap: 0; padding: 0 0.5rem; }
+    .tab-btn { padding: 0.7rem 0.9rem; font-size: 0.8rem; white-space: nowrap; }
+
+    /* Cards */
+    .card { padding: 1rem; border-radius: 12px; }
+    .card-title { font-size: 0.95rem; }
+
+    /* Activity rows — stack time above text */
+    .activity-row {
+        grid-template-columns: 90px 1fr 36px;
+        grid-template-rows: auto auto;
+        gap: 0.35rem;
+    }
+    .act-text-wrap  { grid-column: 1 / 3; }
+    .act-duration   { grid-column: 1 / 2; }
+    .act-category   { grid-column: 2 / 3; }
+    .btn-remove     { grid-row: 1; grid-column: 3; align-self: start; }
+
+    /* Summary grids */
+    .category-cards  { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+    .week-stats      { grid-template-columns: repeat(2, 1fr); }
+    .week-grid       { grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+    .cat-bar-row     { grid-template-columns: 70px 1fr 55px; }
+    .activity-item   { grid-template-columns: 50px 1fr; }
+    .act-dur, .act-cat-badge { display: none; }
+
+    /* Finance */
+    .summary-title-row    { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+    .finance-inline-cards { flex-wrap: wrap; gap: 0.35rem; }
+    .finance-mini-card    { padding: 0.3rem 0.6rem; font-size: 0.78rem; }
+
+    /* Expense / Income form rows */
+    .expense-row { grid-template-columns: 1fr 100px 36px; }
+
+    /* Food form */
+    .food-row { grid-template-columns: 90px 1fr; }
+
+    /* Sleep form */
+    .sleep-row { grid-template-columns: 22px 58px 100px 44px 1fr; gap: 0.4rem; }
+
+    /* Health pills */
+    .health-status-pills { gap: 0.3rem; }
+    .health-pill { padding: 0.28rem 0.65rem; font-size: 0.78rem; }
+
+    /* Yearly review */
+    .yearly-stats-row { grid-template-columns: repeat(2, 1fr); }
+    .food-freq-grid   { grid-template-columns: repeat(2, 1fr); }
+    .month-filter-row, .activity-filter-row { gap: 0.3rem; }
+    .month-pill, .act-pill { padding: 0.25rem 0.6rem; font-size: 0.75rem; }
+    .monthly-finance-table { font-size: 0.8rem; }
+    .monthly-finance-table th,
+    .monthly-finance-table td { padding: 0.4rem 0.5rem; }
+    .heatmap-cell { width: 12px; height: 12px; }
+
+    /* AI Coach */
+    #ai-coach-panel { width: calc(100vw - 2rem); right: 1rem; bottom: 5rem; }
 }
 
 /* ─── Card subtitle ──────────────────────────────────────────────────────── */
@@ -1087,19 +1149,101 @@ textarea { resize: vertical; min-height: 80px; }
 }
 #ai-coach-send:hover { background: #16213E; }
 
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Phone (≤ 480px)
+═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
-    #ai-coach-panel { width: calc(100vw - 2rem); right: 1rem; bottom: 4.5rem; }
-    #ai-coach-fab   { bottom: 1rem; right: 1rem; }
-    .food-row { grid-template-columns: 100px 1fr; }
-    .expense-row { grid-template-columns: 1fr 110px 36px; }
-    .summary-title-row { flex-direction: column; align-items: flex-start; }
+    /* Layout */
+    main { padding: 0.6rem 0.6rem 6rem; }
+
+    /* Header — single compact row */
+    header { padding: 0.6rem 0.75rem; gap: 0.3rem; }
+    header h1 { font-size: 0.95rem; }
     .header-quote { display: none; }
-    .sleep-row { grid-template-columns: 24px 60px 100px 44px 1fr; gap: 0.35rem; }
-    .sleep-summary-row { flex-direction: column; gap: 0.6rem; }
-}
-@media (max-width: 768px) {
-    .header-quote { max-width: 160px; }
-    .hq-text { font-size: 0.62rem; }
+    .header-actions { gap: 0.25rem; }
+    .btn-header { padding: 0.35rem 0.55rem; font-size: 0.72rem; }
+    .btn-logout { display: none; }
+
+    /* Nav — scrollable pill strip */
+    nav { padding: 0 0.25rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    nav::-webkit-scrollbar { display: none; }
+    .tab-btn { padding: 0.65rem 0.75rem; font-size: 0.75rem; flex-shrink: 0; }
+
+    /* Cards */
+    .card { padding: 0.85rem 0.85rem; border-radius: 10px; margin-bottom: 0.75rem; }
+    .card-title { font-size: 0.9rem; }
+
+    /* Activity rows — fully stacked */
+    .activity-row {
+        grid-template-columns: 1fr 36px;
+        grid-template-rows: auto auto auto;
+        gap: 0.3rem;
+        padding: 0.6rem 0;
+    }
+    .act-text-wrap  { grid-column: 1 / 2; grid-row: 1; }
+    .act-duration   { grid-column: 1 / 2; grid-row: 2; }
+    .act-category   { grid-column: 1 / 2; grid-row: 3; }
+    .btn-remove     { grid-column: 2; grid-row: 1; align-self: start; }
+
+    /* Summary grids — single column */
+    .category-cards  { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .week-stats      { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .week-grid       { grid-template-columns: repeat(3, 1fr); gap: 0.3rem; }
+    .cat-bar-row     { grid-template-columns: 60px 1fr 50px; font-size: 0.8rem; }
+    .activity-item   { grid-template-columns: 44px 1fr; font-size: 0.82rem; }
+    .act-dur, .act-cat-badge { display: none; }
+
+    /* Stat cards */
+    .stat-number { font-size: 1.6rem; }
+    .stat-label  { font-size: 0.7rem; }
+
+    /* Finance */
+    .summary-title-row    { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+    .finance-inline-cards { flex-wrap: wrap; gap: 0.3rem; }
+    .finance-mini-card    { padding: 0.25rem 0.5rem; font-size: 0.74rem; }
+    .expense-row          { grid-template-columns: 1fr 90px 34px; gap: 0.35rem; }
+    .finance-summary-box  { padding: 0.75rem 0.85rem; }
+    .fin-sum-row          { font-size: 0.83rem; }
+
+    /* Food form */
+    .food-row { grid-template-columns: 80px 1fr; gap: 0.5rem; }
+    .food-row label { font-size: 0.78rem; }
+
+    /* Sleep form — tighter on tiny screens */
+    .sleep-row { grid-template-columns: 20px 56px 92px 40px 1fr; gap: 0.3rem; font-size: 0.82rem; }
+    .sleep-summary-row { flex-direction: column; gap: 0.5rem; }
+    .sleep-tag { font-size: 0.75rem; padding: 0.2rem 0.5rem; }
+
+    /* Health pills — wrap tightly */
+    .health-status-pills { gap: 0.25rem; flex-wrap: wrap; }
+    .health-pill { padding: 0.25rem 0.55rem; font-size: 0.73rem; }
+
+    /* Running balance */
+    .running-balance-display { font-size: 0.78rem; }
+    .rb-amount { font-size: 0.88rem; }
+
+    /* Yearly Review */
+    .yearly-stats-row    { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .yearly-big-stat     { padding: 0.75rem; }
+    .yearly-big-stat .stat-number { font-size: 1.5rem; }
+    .food-freq-grid      { grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+    .month-filter-row, .activity-filter-row { gap: 0.25rem; }
+    .month-pill, .act-pill { padding: 0.2rem 0.5rem; font-size: 0.7rem; }
+    .monthly-finance-table { font-size: 0.74rem; }
+    .monthly-finance-table th,
+    .monthly-finance-table td { padding: 0.35rem 0.35rem; }
+    .heatmap-cell { width: 10px; height: 10px; border-radius: 2px; }
+    .monthly-bar-chart { height: 80px; }
+    .mbc-bar-wrap { height: 60px; }
+    .book-list { gap: 0.4rem; }
+
+    /* AI Coach */
+    #ai-coach-panel { width: calc(100vw - 1.5rem); right: 0.75rem; bottom: 4.5rem; max-height: 65vh; }
+    #ai-coach-fab   { bottom: 1rem; right: 1rem; width: 50px; height: 50px; font-size: 1.3rem; }
+
+    /* Login screen */
+    .login-card { padding: 2rem 1.25rem; max-width: 92vw; }
+    .login-title { font-size: 1.5rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1648,18 +1792,3 @@ textarea { resize: vertical; min-height: 80px; }
 .rb-pos    { color: #2e7d32; }
 .rb-neg    { color: #c62828; }
 
-/* ═══════════════════════════════════════════════════════════════════
-   YEARLY REVIEW — Responsive
-═══════════════════════════════════════════════════════════════════ */
-@media (max-width: 480px) {
-    .yearly-stats-row { grid-template-columns: repeat(2, 1fr); }
-    .food-freq-grid   { grid-template-columns: repeat(2, 1fr); }
-    .heatmap-cell     { width: 11px; height: 11px; }
-    .monthly-bar-chart { height: 80px; }
-    .mbc-bar-wrap { height: 60px; }
-    .month-filter-row  { gap: 0.3rem; }
-    .activity-filter-row { gap: 0.3rem; }
-    .monthly-finance-table { font-size: 0.75rem; }
-    .monthly-finance-table th,
-    .monthly-finance-table td { padding: 0.4rem 0.4rem; }
-}
