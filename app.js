@@ -9,6 +9,7 @@ let aiCoachOpen       = false;
 let yearlyAllEntries  = {};   // cache for yearly data
 let yearlyActiveMonth = 'all';
 let yearlyActiveFilter = 'all';
+let runningBalance    = null;  // cached running balance from last known entry
 
 // ─── Baselines ────────────────────────────────────────────────────────────────
 const BASELINES = {
@@ -238,6 +239,96 @@ function updateCategoryColor(id, category) {
     row.className = 'activity-row cat-' + category;
 }
 
+// ─── Health Status ────────────────────────────────────────────────────────────
+function selectHealthStatus(status, btn) {
+    document.querySelectorAll('.health-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('health-status').value = status;
+    const sickRow = document.getElementById('sick-days-row');
+    sickRow.style.display = (status === 'sick' || status === 'recovering') ? 'flex' : 'none';
+}
+
+function resetHealthStatus() {
+    document.querySelectorAll('.health-pill').forEach(p => p.classList.remove('active'));
+    const healthyBtn = document.querySelector('.health-pill[data-status="healthy"]');
+    if (healthyBtn) healthyBtn.classList.add('active');
+    document.getElementById('health-status').value = 'healthy';
+    document.getElementById('sick-days-count').value = '1';
+    document.getElementById('sick-days-row').style.display = 'none';
+}
+
+function loadHealthStatus(healthData) {
+    const status = (healthData && healthData.status) || 'healthy';
+    document.querySelectorAll('.health-pill').forEach(p => p.classList.remove('active'));
+    const pill = document.querySelector(`.health-pill[data-status="${status}"]`);
+    if (pill) pill.classList.add('active');
+    document.getElementById('health-status').value = status;
+    const sickRow = document.getElementById('sick-days-row');
+    if (status === 'sick' || status === 'recovering') {
+        sickRow.style.display = 'flex';
+        document.getElementById('sick-days-count').value = (healthData && healthData.sickDays) || 1;
+    } else {
+        sickRow.style.display = 'none';
+    }
+}
+
+// ─── Running Balance ──────────────────────────────────────────────────────────
+async function loadRunningBalance() {
+    // Fetch the last 60 days of entries to compute the running balance
+    const today = new Date();
+    const from  = new Date(today); from.setDate(from.getDate() - 60);
+    const toStr   = today.toISOString().slice(0, 10);
+    const fromStr = from.toISOString().slice(0, 10);
+    const entries = await storage.getEntriesInRange(fromStr, toStr);
+
+    let balance = 0;
+    let hasAny  = false;
+    // Sort dates ascending
+    Object.keys(entries).sort().forEach(date => {
+        const e = entries[date];
+        if (!e.finances) return;
+        const { bankBalance, income = [], expenses = [] } = e.finances;
+        const totalInc = income.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+        const totalExp = expenses.reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
+        if (bankBalance !== '' && bankBalance !== null && bankBalance !== undefined) {
+            // Manual override — set as new base then apply income/expenses from same entry
+            balance = parseFloat(bankBalance) + totalInc - totalExp;
+        } else {
+            balance += totalInc - totalExp;
+        }
+        hasAny = true;
+    });
+
+    runningBalance = hasAny ? balance : null;
+    const el = document.getElementById('running-balance-display');
+    if (el) {
+        if (runningBalance !== null) {
+            el.innerHTML = `<span class="rb-label">Running balance:</span> <span class="rb-amount ${runningBalance < 0 ? 'rb-neg' : 'rb-pos'}">${formatCurrency(runningBalance)}</span>`;
+        } else {
+            el.innerHTML = `<span class="rb-label">No balance history yet.</span>`;
+        }
+    }
+    return runningBalance;
+}
+
+// Compute running balance up to a given date from a set of entries (for display)
+function computeRunningBalance(entries) {
+    let balance = 0;
+    Object.keys(entries).sort().forEach(date => {
+        const e = entries[date];
+        if (!e || !e.finances) return;
+        const { bankBalance, income = [], expenses = [] } = e.finances;
+        const totalInc = income.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+        const totalExp = expenses.reduce((s, x) => s + (parseFloat(x.amount) || 0), 0);
+        if (bankBalance !== '' && bankBalance !== null && bankBalance !== undefined) {
+            balance = parseFloat(bankBalance) + totalInc - totalExp;
+        } else {
+            balance += totalInc - totalExp;
+        }
+    });
+    return balance;
+}
+
 // ─── Expense Rows ─────────────────────────────────────────────────────────────
 function addExpenseRow(prefill = {}) {
     expenseCount++;
@@ -367,9 +458,16 @@ async function saveEntry() {
     const balance  = document.getElementById('finance-balance').value;
     const finances = { expenses, income, bankBalance: balance ? parseFloat(balance) : '' };
     const review   = document.getElementById('daily-review').value;
+    const healthStatus = document.getElementById('health-status').value || 'healthy';
+    const sickDaysEl   = document.getElementById('sick-days-count');
+    const health = {
+        status:   healthStatus,
+        sickDays: (healthStatus === 'sick' || healthStatus === 'recovering')
+                    ? (parseInt(sickDaysEl.value) || 1) : 0
+    };
 
     showToast('Saving…', 'info');
-    const saved = await storage.saveEntry(date, { activities, food, finances, review });
+    const saved = await storage.saveEntry(date, { activities, food, finances, review, health });
     if (saved) {
         showToast('Entry saved ✅', 'success');
         resetForm();
@@ -397,6 +495,8 @@ function resetForm() {
     addIncomeRow();
     document.getElementById('entry-date').value = new Date().toISOString().slice(0, 10);
     window._editingFullList = null;
+    resetHealthStatus();
+    loadRunningBalance();
 }
 
 // ─── Load existing entry for selected date ────────────────────────────────────
@@ -461,6 +561,9 @@ async function loadExistingIntoForm(date) {
         if (!entry.finances.income || entry.finances.income.length === 0) addIncomeRow();
     }
 
+    // Load health status
+    loadHealthStatus(entry.health || null);
+
     window._editingFullList = date;
     showToast('Loaded for editing. Saving will replace the full entry for this date.', 'info');
     const banner = document.getElementById('existing-banner');
@@ -508,6 +611,21 @@ function parseWaterMl(waterStr) {
 }
 
 // ─── Finance card helper ──────────────────────────────────────────────────────
+// ─── Health Badge ─────────────────────────────────────────────────────────────
+function renderHealthBadge(health) {
+    if (!health || health.status === 'healthy') return '';
+    const map = {
+        sick:       { icon: '🤒', label: 'Sick',       cls: 'health-badge-sick'       },
+        recovering: { icon: '💊', label: 'Recovering', cls: 'health-badge-recovering' },
+        travelling: { icon: '✈️', label: 'Travelling', cls: 'health-badge-travelling' },
+        rest:       { icon: '😴', label: 'Rest Day',   cls: 'health-badge-rest'       },
+    };
+    const info = map[health.status] || { icon: '🩺', label: health.status, cls: 'health-badge-sick' };
+    const daysNote = (health.status === 'sick' || health.status === 'recovering') && health.sickDays > 0
+        ? ` — Day ${health.sickDays}` : '';
+    return `<div class="health-badge ${info.cls}">${info.icon} ${info.label}${daysNote}</div>`;
+}
+
 function renderFinanceCards(totalSpent, latestBalance) {
     return `
         <div class="finance-mini-card expense-card">
@@ -598,12 +716,19 @@ async function renderDailySummary() {
 
     const agg      = aggregateActivities(entry.activities);
     const food     = entry.food     || {};
-    const finances = entry.finances || { expenses: [], bankBalance: '' };
+    const finances = entry.finances || { expenses: [], income: [], bankBalance: '' };
+    const health   = entry.health   || { status: 'healthy', sickDays: 0 };
     const waterMl  = parseWaterMl(food.water);
-    const totalSpent = (finances.expenses || []).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+    const totalSpent  = (finances.expenses || []).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+    const totalIncome = (finances.income   || []).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+
+    // Compute running balance for today using last 60 days
+    const today60From = new Date(); today60From.setDate(today60From.getDate() - 60);
+    const recentEntries = await storage.getEntriesInRange(today60From.toISOString().slice(0, 10), today);
+    const todayRunningBal = computeRunningBalance(recentEntries);
 
     // Finance cards in heading
-    if (finCards) finCards.innerHTML = renderFinanceCards(totalSpent, finances.bankBalance);
+    if (finCards) finCards.innerHTML = renderFinanceCards(totalSpent, todayRunningBal);
 
     const prayerPct   = baselinePct(agg.prayerMins,     BASELINES.prayer);
     const biblePct    = baselinePct(agg.bibleStudyMins, BASELINES.bibleStudy);
@@ -645,12 +770,16 @@ async function renderDailySummary() {
                 <span class="expense-amount"><strong>${formatCurrency(totalSpent)}</strong></span>
             </div>
         </div>` : ''}
+        ${renderHealthBadge(health)}
         ${entry.review ? `<div class="review-box"><strong>Reflection:</strong> ${entry.review}</div>` : ''}
         <div class="ai-commentary-box">
             <div class="ai-commentary-header">🤖 AI Daily Coach</div>
             <div id="daily-ai-text" class="ai-commentary-loading">Generating commentary…</div>
         </div>
     `;
+
+    const healthNote = health.status !== 'healthy'
+        ? `Health: ${health.status}${health.sickDays > 0 ? ` (day ${health.sickDays} of illness)` : ''}` : '';
 
     const aiPrompt = [
         `Daily diary for Pastor Fire (${today}):`,
@@ -660,8 +789,11 @@ async function renderDailySummary() {
         food.water ? `Water: ${food.water} (${waterPct}%)` : '',
         hasMeals ? `Food: Breakfast="${food.breakfast}", Lunch="${food.lunch}", Dinner="${food.dinner}", Snacks="${food.snacks}"` : '',
         totalSpent > 0 ? `Spent: $${totalSpent.toFixed(2)}` : '',
-        finances.bankBalance ? `Bank balance: $${finances.bankBalance}` : '',
-        `\nGive a warm 3-4 sentence daily coaching note. Mention prayer performance, food balance if logged, and spending habits if relevant. End with encouragement.`
+        totalIncome > 0 ? `Income received: $${totalIncome.toFixed(2)}` : '',
+        `Running balance: $${todayRunningBal.toFixed(2)}`,
+        healthNote,
+        entry.review ? `Reflection: "${entry.review}"` : '',
+        `\nGive a warm 3-4 sentence daily coaching note. Mention prayer performance, food balance if logged, and spending habits if relevant. If sick or travelling, acknowledge that gracefully. End with encouragement.`
     ].filter(Boolean).join('\n');
 
     const commentary = await getAICommentary(aiPrompt);
@@ -945,6 +1077,10 @@ async function renderYearlyContent(allEntries, year) {
         monthlyExpenses: new Array(12).fill(0),
         monthlyPrayer:   new Array(12).fill(0),
         totalIncome: 0, totalExpenses: 0, latestBalance: '',
+        // Health
+        sickDays: 0, recoveringDays: 0, travelDays: 0, restDays: 0,
+        healthyDays: 0,
+        monthlySick: new Array(12).fill(0),
     };
 
     Object.keys(entries).forEach(date => {
@@ -1010,14 +1146,24 @@ async function renderYearlyContent(allEntries, year) {
             agg.totalIncome   += inc;
             if (entry.finances.bankBalance !== '') agg.latestBalance = entry.finances.bankBalance;
         }
+
+        // Health
+        const h = entry.health || { status: 'healthy', sickDays: 0 };
+        if (h.status === 'sick')        { agg.sickDays       += (h.sickDays || 1); agg.monthlySick[monthIdx]++; }
+        else if (h.status === 'recovering') { agg.recoveringDays += (h.sickDays || 1); agg.monthlySick[monthIdx]++; }
+        else if (h.status === 'travelling') { agg.travelDays++; }
+        else if (h.status === 'rest')       { agg.restDays++; }
+        else                                { agg.healthyDays++; }
     });
 
-    const netPosition = agg.totalIncome - agg.totalExpenses;
+    const netPosition    = agg.totalIncome - agg.totalExpenses;
+    const yearRunningBal = computeRunningBalance(entries);
 
     // Finance mini cards
     if (finCards) finCards.innerHTML = `
         <div class="finance-mini-card expense-card"><span class="fmc-icon">💵</span><div><div class="fmc-label">Income</div><div class="fmc-value">${formatCurrency(agg.totalIncome)}</div></div></div>
         <div class="finance-mini-card balance-card"><span class="fmc-icon">💸</span><div><div class="fmc-label">Spent</div><div class="fmc-value">${formatCurrency(agg.totalExpenses)}</div></div></div>
+        <div class="finance-mini-card ${netPosition >= 0 ? 'balance-card' : 'expense-card'}"><span class="fmc-icon">🏦</span><div><div class="fmc-label">Balance</div><div class="fmc-value">${formatCurrency(yearRunningBal)}</div></div></div>
     `;
 
     const yearLabel = yearlyActiveMonth === 'all' ? year : `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][yearlyActiveMonth]} ${year}`;
@@ -1216,6 +1362,43 @@ async function renderYearlyContent(allEntries, year) {
         </div>`;
     }
 
+    // ── HEALTH yearly section ─────────────────────────────────────────────────
+    if (yearlyActiveFilter === 'all' || yearlyActiveFilter === 'health') {
+        const totalUnwell   = agg.sickDays + agg.recoveringDays;
+        const sickBadge     = totalUnwell > 0
+            ? `<span class="ybs-badge over">${totalUnwell} sick/recovery days</span>` : `<span class="ybs-badge">No sick days 🎉</span>`;
+        html += `<div class="yearly-section">
+            <div class="yearly-section-title">🩺 Health Overview</div>
+            <div class="yearly-stats-row">
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${agg.healthyDays}</div>
+                    <div class="ybs-label">Healthy Days</div>
+                    <span class="ybs-badge exact">${agg.daysLogged} days logged</span>
+                </div>
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${agg.sickDays}</div>
+                    <div class="ybs-label">Sick Day(s)</div>
+                    ${agg.sickDays > 0 ? `<span class="ybs-badge over">🤒 logged</span>` : `<span class="ybs-badge">None 🎉</span>`}
+                </div>
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${agg.recoveringDays}</div>
+                    <div class="ybs-label">Recovery Day(s)</div>
+                    ${agg.recoveringDays > 0 ? `<span class="ybs-badge over">💊 logged</span>` : `<span class="ybs-badge">None</span>`}
+                </div>
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${agg.travelDays}</div>
+                    <div class="ybs-label">Travel Day(s)</div>
+                    ${agg.travelDays > 0 ? `<span class="ybs-badge exact">✈️ trips</span>` : `<span class="ybs-badge">None</span>`}
+                </div>
+                <div class="yearly-big-stat">
+                    <div class="ybs-number">${agg.restDays}</div>
+                    <div class="ybs-label">Rest Day(s)</div>
+                    ${agg.restDays > 0 ? `<span class="ybs-badge exact">😴 rest</span>` : `<span class="ybs-badge">None</span>`}
+                </div>
+            </div>
+        </div>`;
+    }
+
     // ── AI Yearly Coach ───────────────────────────────────────────────────────
     html += `<div class="ai-commentary-box">
         <div class="ai-commentary-header">🤖 AI Yearly Coach</div>
@@ -1237,9 +1420,10 @@ Fasting: ${agg.fastingDays} days (target 36/year)
 Books read: ${bookCount} book(s) — ${Object.keys(agg.books).join(', ') || 'none logged'}
 Water: ${(agg.waterMl/1000).toFixed(1)}L total
 Diary logged: ${agg.daysLogged} days
-Total Income: $${agg.totalIncome.toFixed(2)}, Total Spent: $${agg.totalExpenses.toFixed(2)}, Net: $${(agg.totalIncome - agg.totalExpenses).toFixed(2)}
+Health: ${agg.healthyDays} healthy days, ${agg.sickDays} sick days, ${agg.recoveringDays} recovery days, ${agg.travelDays} travel days, ${agg.restDays} rest days
+Total Income: $${agg.totalIncome.toFixed(2)}, Total Spent: $${agg.totalExpenses.toFixed(2)}, Net: $${netPosition.toFixed(2)}, Running Balance: $${yearRunningBal.toFixed(2)}
 
-Write a 5-6 sentence powerful yearly review. Celebrate prayer milestones. Comment on reading habits vs high-performing leaders. Speak to financial discipline. End with a bold vision statement for the coming year. Tone: pastoral, inspiring, honest.`;
+Write a 5-6 sentence powerful yearly review. Celebrate prayer milestones. Comment on reading habits vs high-performing leaders. Speak to financial discipline and net position. If there were sick days, acknowledge resilience. End with a bold vision statement for the coming year. Tone: pastoral, inspiring, honest.`;
 
     const commentary = await getAICommentary(aiPrompt);
     const aiEl = document.getElementById('yearly-ai-text');
@@ -1343,35 +1527,63 @@ async function sendChatMessage() {
             context += `\nToday's data: Prayer=${minsToDisplay(agg.prayerMins)}, Exercise=${minsToDisplay(agg.exerciseMins)}`;
             if (todayEntry.food) context += `, Food: B="${todayEntry.food.breakfast}" L="${todayEntry.food.lunch}" D="${todayEntry.food.dinner}"`;
             if (todayEntry.finances) {
-                const spent = (todayEntry.finances.expenses || []).reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
-                context += `, Spent today=$${spent.toFixed(2)}, Balance=$${todayEntry.finances.bankBalance || '?'}`;
+                const spent  = (todayEntry.finances.expenses || []).reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
+                const income = (todayEntry.finances.income   || []).reduce((s,i) => s + (parseFloat(i.amount)||0), 0);
+                context += `, Spent today=$${spent.toFixed(2)}, Income today=$${income.toFixed(2)}`;
             }
+            if (todayEntry.health && todayEntry.health.status !== 'healthy') {
+                const h = todayEntry.health;
+                context += `, Health: ${h.status}${h.sickDays > 0 ? ` (day ${h.sickDays})` : ''}`;
+            }
+            if (todayEntry.review) context += `, Reflection: "${todayEntry.review}"`;
         }
 
-        // Week summary
-        let weekPrayer = 0, weekSpent = 0, weekDays = 0;
+        // Week summary — include health tallies
+        let weekPrayer = 0, weekSpent = 0, weekIncome = 0, weekDays = 0;
+        let weekSickDays = 0, weekTravelDays = 0, weekRestDays = 0;
         Object.values(weekEntries).forEach(e => {
             if (!e.activities) return;
             weekDays++;
             const agg = aggregateActivities(e.activities);
             weekPrayer += agg.prayerMins;
-            if (e.finances) weekSpent += (e.finances.expenses||[]).reduce((s,ex)=>s+(parseFloat(ex.amount)||0),0);
+            if (e.finances) {
+                weekSpent  += (e.finances.expenses||[]).reduce((s,ex)=>s+(parseFloat(ex.amount)||0),0);
+                weekIncome += (e.finances.income  ||[]).reduce((s,i) =>s+(parseFloat(i.amount) ||0),0);
+            }
+            if (e.health) {
+                if (e.health.status === 'sick' || e.health.status === 'recovering') weekSickDays += (e.health.sickDays || 1);
+                if (e.health.status === 'travelling') weekTravelDays++;
+                if (e.health.status === 'rest')       weekRestDays++;
+            }
         });
-        context += `\nThis week: Prayer=${minsToDisplay(weekPrayer)} (target 14hrs), Diary logged=${weekDays}/7 days (target 5), Spent=$${weekSpent.toFixed(2)}`;
+        context += `\nThis week: Prayer=${minsToDisplay(weekPrayer)} (target 14hrs), Diary logged=${weekDays}/7 days (target 5), Spent=$${weekSpent.toFixed(2)}, Income=$${weekIncome.toFixed(2)}`;
+        if (weekSickDays > 0)   context += `, Sick days this week=${weekSickDays}`;
+        if (weekTravelDays > 0) context += `, Travel days=${weekTravelDays}`;
+        if (weekRestDays > 0)   context += `, Rest days=${weekRestDays}`;
 
-        // Month summary
-        let monthPrayer = 0, monthSpent = 0, monthDays = 0, latestBalance = '';
+        // Month summary — include health tallies and running balance
+        let monthPrayer = 0, monthSpent = 0, monthIncome = 0, monthDays = 0;
+        let monthSickDays = 0, monthTravelDays = 0, monthRestDays = 0;
         Object.values(monthEntries).forEach(e => {
             if (!e.activities) return;
             monthDays++;
             const agg = aggregateActivities(e.activities);
             monthPrayer += agg.prayerMins;
             if (e.finances) {
-                monthSpent += (e.finances.expenses||[]).reduce((s,ex)=>s+(parseFloat(ex.amount)||0),0);
-                if (e.finances.bankBalance !== '') latestBalance = e.finances.bankBalance;
+                monthSpent  += (e.finances.expenses||[]).reduce((s,ex)=>s+(parseFloat(ex.amount)||0),0);
+                monthIncome += (e.finances.income  ||[]).reduce((s,i) =>s+(parseFloat(i.amount) ||0),0);
+            }
+            if (e.health) {
+                if (e.health.status === 'sick' || e.health.status === 'recovering') monthSickDays += (e.health.sickDays || 1);
+                if (e.health.status === 'travelling') monthTravelDays++;
+                if (e.health.status === 'rest')       monthRestDays++;
             }
         });
-        context += `\nThis month: Prayer=${(monthPrayer/60).toFixed(1)}hrs (target 60hrs), Diary logged=${monthDays} days (target 20), Total spent=$${monthSpent.toFixed(2)}, Latest balance=$${latestBalance || '?'}`;
+        const runBal = computeRunningBalance(monthEntries);
+        context += `\nThis month: Prayer=${(monthPrayer/60).toFixed(1)}hrs (target 60hrs), Diary logged=${monthDays} days (target 20), Total spent=$${monthSpent.toFixed(2)}, Total income=$${monthIncome.toFixed(2)}, Running balance=$${runBal.toFixed(2)}`;
+        if (monthSickDays > 0)   context += `, Sick days this month=${monthSickDays}`;
+        if (monthTravelDays > 0) context += `, Travel days=${monthTravelDays}`;
+        if (monthRestDays > 0)   context += `, Rest days=${monthRestDays}`;
     } catch (e) {
         context += '\n(Data unavailable right now)';
     }
@@ -1550,9 +1762,11 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('entry-date').addEventListener('change', loadEntryForDate);
     addActivityField();
     addExpenseRow();
+    addIncomeRow();
     // Show write tab by default
     showTab('write');
-
+    // Load running balance on startup
+    loadRunningBalance();
     // Header rotating quotes
     initHeaderQuotes();
 });

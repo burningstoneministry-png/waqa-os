@@ -20,6 +20,7 @@ const storage = {
             food:       row.food       || { breakfast: '', lunch: '', dinner: '', snacks: '', water: '' },
             finances:   row.finances   || { expenses: [], income: [], bankBalance: '' },
             review:     row.review     || '',
+            health:     row.health     || { status: 'healthy', sickDays: 0 },
             savedAt:    row.saved_at
         };
     },
@@ -31,6 +32,7 @@ const storage = {
             food:       e.food       || { breakfast: '', lunch: '', dinner: '', snacks: '', water: '' },
             finances:   e.finances   || { expenses: [], income: [], bankBalance: '' },
             review:     e.review     || '',
+            health:     e.health     || { status: 'healthy', sickDays: 0 },
             saved_at:   e.savedAt    || new Date().toISOString()
         }));
     },
@@ -57,6 +59,8 @@ const storage = {
                             ? entry.finances
                             : (existing ? existing.finances : { expenses: [], bankBalance: '' });
 
+        const health = entry.health || (existing ? existing.health : { status: 'healthy', sickDays: 0 });
+
         const { data, error } = await this.client
             .from('diary_entries')
             .upsert({
@@ -64,6 +68,7 @@ const storage = {
                 activities: mergedActivities,
                 food,
                 finances,
+                health,
                 review:     entry.review || (existing ? existing.review : '') || '',
                 saved_at:   new Date().toISOString()
             }, { onConflict: 'date' })

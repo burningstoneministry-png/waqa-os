@@ -1327,6 +1327,98 @@ textarea { resize: vertical; min-height: 80px; }
 .btn-add-income:hover { background: #c8e6c9; border-color: #66bb6a; }
 
 /* ═══════════════════════════════════════════════════════════════════
+   HEALTH STATUS — Form Pills
+═══════════════════════════════════════════════════════════════════ */
+.health-status-row { margin-bottom: 1rem; }
+.health-status-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+    margin-bottom: 0.6rem;
+}
+.health-pill {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.82rem;
+    font-family: var(--font);
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.18s;
+}
+.health-pill:hover { border-color: #0F3460; color: #0F3460; }
+.health-pill.active[data-status="healthy"]    { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+.health-pill.active[data-status="sick"]       { background: #fce4ec; border-color: #c62828; color: #c62828; }
+.health-pill.active[data-status="recovering"] { background: #fff3e0; border-color: #e65100; color: #e65100; }
+.health-pill.active[data-status="travelling"] { background: #e3f2fd; border-color: #1565c0; color: #1565c0; }
+.health-pill.active[data-status="rest"]       { background: #f3e5f5; border-color: #6a1b9a; color: #6a1b9a; }
+
+.sick-days-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    background: #fce4ec;
+    border: 1.5px solid #ef9a9a;
+    border-radius: 10px;
+}
+.sick-days-row label { font-size: 0.82rem; color: #c62828; font-weight: 500; flex: 1; }
+.sick-days-row input {
+    width: 70px;
+    border: 1.5px solid #ef9a9a;
+    border-radius: 8px;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.9rem;
+    font-family: var(--font);
+    text-align: center;
+    outline: none;
+    color: #c62828;
+    font-weight: 700;
+}
+
+/* Health badge in Daily Summary */
+.health-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+.health-badge-sick       { background: #fce4ec; color: #c62828; border: 1.5px solid #ef9a9a; }
+.health-badge-recovering { background: #fff3e0; color: #e65100; border: 1.5px solid #ffcc80; }
+.health-badge-travelling { background: #e3f2fd; color: #1565c0; border: 1.5px solid #90caf9; }
+.health-badge-rest       { background: #f3e5f5; color: #6a1b9a; border: 1.5px solid #ce93d8; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   RUNNING BALANCE — Display below bank balance field
+═══════════════════════════════════════════════════════════════════ */
+.field-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 400;
+    font-style: italic;
+    margin-left: 0.3rem;
+}
+.running-balance-display {
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.rb-label  { color: var(--text-muted); }
+.rb-amount { font-weight: 700; font-size: 0.95rem; }
+.rb-pos    { color: #2e7d32; }
+.rb-neg    { color: #c62828; }
+
+/* ═══════════════════════════════════════════════════════════════════
    YEARLY REVIEW — Responsive
 ═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
